@@ -1,0 +1,10 @@
+[
+  "**/*.md",
+  "**/*.bat",
+  "**/*.sh",
+  "pom.xml",
+  "gradle.*",
+  "settings.gradle",
+  "build.gradle",
+  ".gitignore"
+]
