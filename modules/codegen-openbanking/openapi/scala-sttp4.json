@@ -1,0 +1,31 @@
+{
+  "generatorName": "scala-sttp4",
+  "inputSpec": "modules/codegen-payroll/openapi/payroll.yaml",
+  "outputDir": "modules/codegen-payroll/target/openapi",
+  "mainPackage": "com.acme.payroll.client",
+  "apiPackage": "com.acme.payroll.client.api",
+  "modelPackage": "com.acme.payroll.client.model",
+  "invokerPackage": "com.acme.payroll.client",
+  "globalProperties": { "apis": "", "models": "", "supportingFiles": "" },
+  "configOptions": {
+    "useScala3": "true",
+    "dateLibrary": "java8",
+    "jsonLibrary": "circe",
+    "modelPropertyNaming": "camelCase",
+    "ensureUniqueParams": "true",
+    "sortParamsByRequiredFlag": "true",
+    "sortModelPropertiesByRequiredFlag": "true",
+    "prependFormOrBodyParameters": "false",
+    "allowUnicodeIdentifiers": "false",
+    "sourceFolder": "src/main/scala",
+    "hideGenerationTimestamp": "true",
+    "separateErrorChannel": "false",
+    "enumUnknownDefaultCase": "true",
+    "disallowAdditionalPropertiesIfNotPresent": "false",
+    "sttpClientVersion": "4.0.0"  
+  },
+  "additionalProperties": {
+    "artifactId": "payroll-client",
+    "artifactVersion": "1.0.0"
+  }
+}

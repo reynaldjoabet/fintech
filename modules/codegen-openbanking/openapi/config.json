@@ -1,0 +1,28 @@
+{
+  "generatorName": "scala-sttp4-jsoniter",
+  "inputSpec": "modules/codegen-openbanking/openapi/open-banking.yaml",
+  "outputDir": "modules/codegen-openbanking/target/openapi",
+  "mainPackage": "openbanking.client",
+  "apiPackage": "openbanking.client.api",
+  "modelPackage": "openbanking.client.model",
+  "invokerPackage": "openbanking.client",
+  "globalProperties": { "apis": "", "models": "", "supportingFiles": "" },
+  "configOptions": {                    
+    "modelPropertyNaming": "camelCase",
+    "ensureUniqueParams": "true",
+    "sortParamsByRequiredFlag": "true",
+    "sortModelPropertiesByRequiredFlag": "true",
+    "allowUnicodeIdentifiers": "false",
+    "prependFormOrBodyParameters": "false",
+    "enumUnknownDefaultCase": "true",
+    "disallowAdditionalPropertiesIfNotPresent": "false",
+    "separateErrorChannel": "false",
+    "sttpClientVersion": "4.0.11",
+    "jsoniterVersion": "2.38.2"
+  },
+  "additionalProperties": {
+    "artifactId": "openbanking-client",
+    "artifactVersion": "1.0.0",
+     "sourceFolder": ""
+  }
+}
