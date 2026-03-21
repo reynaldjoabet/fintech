@@ -235,3 +235,22 @@ lazy val codegenPayroll = project
 docker run --rm -v "$PWD":/local openapitools/openapi-generator-cli \
   generate -c /local/modules/codegen-payroll/openapi/config.json
 ```
+
+Open banking is a regulatory and industry framework that allows consumers to securely share their financial data (like balances, transactions, or payment initiation) with third-party apps through APIs, with their explicit consent.
+Goal: Give customers more control over their financial data and promote innovation and competition among financial services.
+Core idea: Banks are required (or encouraged) to provide standardized, secure APIs that let authorized third parties (like budgeting apps, lenders, or payment services) access financial data or initiate transactions
+
+
+with traditional banking,the focus is on efficiency and the mass market. All banking products are bundled together..current account, trading account,mortage,retirement account,saving account... if you have one account, you will likely have the other at the same bank
+
+With open banking,open finance, we take the mass market offer and unbundle it.  we unbundle in terms of apis; credit card api,saving account api,current account api.. this is what we call open banking..
+
+with open finane, we have retirement api,trading api,mortage and loans api
+
+
+EU the Payment Services Directive 2/PSD2 framework mandates banks open up certain data and allow payment initiation.
+
+Open Finance takes the principles of Open Banking further: it expands the data‐sharing and interoperability to a broader range of financial products and services — not just bank accounts, but also savings, investments, pensions, insurance, mortgages, loans, etc
+
+
+It aims to enable more holistic consumer visibility and control of their entire financial footprint, and to allow third parties (with consent) to build richer services that use all of someone’s financial data, not just banking

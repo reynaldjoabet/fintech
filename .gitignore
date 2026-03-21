@@ -33,3 +33,6 @@ web/.DS_Store
 .vscode/
 .metals/
 .scala-build/
+
+/modules/finicity-codegen/src/main/scala/
+/modules/clickbank-codegen/src/main/scala/

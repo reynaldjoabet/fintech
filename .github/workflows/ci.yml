@@ -16,8 +16,6 @@ jobs:
 
       - name: Set up Sbt    
         uses: sbt/setup-sbt@v1
-        with:
-          sbt-version: "1.11.7"  
 
       - name: Compile (runs codegen via sourceGenerators)
         run: sbt -v +compile

@@ -1,8 +1,60 @@
+import org.checkerframework.checker.units.qual.t
 import Dependencies._
-
-ThisBuild / scalaVersion := "3.3.6"
+import com.typesafe.sbt.packager.docker.DockerChmodType
+import com.typesafe.sbt.packager.docker._
+import scala.sys.process._
+import scala.util.Try
+import java.nio.file.Path
+ThisBuild / scalaVersion := "3.3.7"
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
+
+// define task to get version from git tags
+
+lazy val gitTagVersion = taskKey[String]("Get version from git tags")
+
+gitTagVersion := {
+  val tag = "git describe --tags --abbrev=0".!!.trim
+  tag
+}
+
+lazy val hash = "git rev-parse HEAD".!!.trim
+
+lazy val tag = "git describe --tags --exact-match"
+
+lazy val version2 = "git describe --tags".!!.stripLineEnd.stripPrefix("v")
+
+lazy val version3 =
+  "git describe --tags --dirty --always".!!.stripPrefix("v").trim
+
+lazy val description = Try("git describe --tags --match v*".!!.trim).toOption
+
+lazy val buildId = Def.task {
+  val log = streams.value.log
+  def runCommand(cmd: String): Option[String] = {
+    import scala.sys.process._
+    val sb = new StringBuilder
+    val code = cmd ! ProcessLogger(sb append _)
+    val text = sb.toString()
+    if (code == 0) {
+      Some(text)
+    } else {
+      log.warn(s"Can`t launch `$cmd` to determine buildId")
+      log.warn(s"  code=$code text=$text")
+      None
+    }
+  }
+  runCommand("git describe --tags") orElse runCommand(
+    "git log -n1 --pretty=%h"
+  ) getOrElse "unknown"
+}
+
+def currentVersion = ("git describe --tags --match v*" !!).trim.substring(1)
+
+lazy val latestGitTag: String =
+  Try("git describe --tags --abbrev=0".!!.trim)
+    .map(_.stripPrefix("v"))
+    .getOrElse("latest")
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
@@ -13,44 +65,32 @@ lazy val root = (project in file("."))
   )
   .settings(
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client4" %% "core" % "4.0.11",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.38.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.2" % "provided"
+      sttpCore,
+      jsoniter,
+      jsoniterMacros
     )
-  ) //.dependsOn(codegenOpenBanking)          // ⬅️ THIS puts codegen classes on root's classpath
-// .aggregate(codegenOpenBanking)
+  )
+  .aggregate(
+    common,
+    protocols,
+    core,
+    customers,
+    accounts,
+    ledger,
+    payments,
+    compliance,
+    loans,
+    webhooks,
+    api,
+    testkit
+  )
+  .dependsOn(
+    `finicity-codegen` % "compile->compile"
+    // `clickbank-codegen` % "compile->compile"
+  )
+  .settings(publish / skip := true)
 
-// lazy val codegenOpenBanking = (project in file("modules/codegen-openbanking"))
-//   .enablePlugins(OpenApiGeneratorPlugin)
-//   .settings(
-//     name := "codegen-openbanking",
-
-//     // Use the same JSON so CLI and SBT stay in sync
-//     openApiConfigFile := ((ThisBuild / baseDirectory).value /
-//       "modules" / "codegen-openbanking" / "openapi" / "config.json").getPath,
-
-//     // Put generated sources where SBT expects managed sources
-//     openApiOutputDir := ((Compile / sourceManaged).value / "openapi").getAbsolutePath,
-
-//     // Flatten the source tree inside that folder (no src/main/scala nesting)
-//     //openApiConfigOptions ++= Map("sourceFolder" -> ""),
-
-//     // Fail fast on bad specs (optional but recommended)
-//     openApiValidateSpec := Some(true),
-
-//     Compile / sourceGenerators += openApiGenerate.taskValue,
-//   )
-
-// lazy val openbankingApp = project
-//   .in(file("modules/openbanking-app"))
-//   .settings(
-//     Compile / sourceGenerators += (codegenOpenBanking / openApiGenerate).taskValue,
-//     libraryDependencies ++= Seq(
-//       "com.softwaremill.sttp.client4" %% "core" % "4.0.11",
-//       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core"   % "2.38.2",
-//       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.38.2" % "provided"
-//     )
-//   )
+val generate = taskKey[Unit]("generate code from APIs")
 
 // =================== COMMON SETTINGS & DEPENDENCIES ===================
 
@@ -66,27 +106,7 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / javacOptions := Seq("-source", "21", "-target", "21")
 //It locks your Java source + bytecode compatibility to JDK 17.
 //Ensures identical behaviour in CI, local dev, and Docker (17-based runtime).
-lazy val isCi = sys.env.get("CI").contains("true")
-
-lazy val V = new {
-  val catsEffect = "3.5.4"
-  val http4s = "0.23.26"
-  val tapir = "1.10.6"
-  val jsoniter = "2.38.2"
-  val sttp4 = "4.0.11"
-  val doobie = "1.0.0-RC5"
-  val flyway = "10.18.2"
-  val pureconfig = "0.17.6"
-  val logback = "1.5.6"
-  val slf4j = "2.0.16"
-  val scalatest = "3.2.19"
-  val scalacheck = "1.17.0"
-  val testcontainers = "1.19.7"
-  val tcScala = "0.41.4" // optional scala wrappers
-  val wiremock = "2.35.2"
-}
-
-def deps(ms: ModuleID*) = libraryDependencies ++= ms
+lazy val isCi = false //sys.enVersion.get("CI").contains("true")
 
 // ================= PRODUCTION DEFAULTS ==============
 lazy val prodSettings = Seq(
@@ -134,23 +154,37 @@ lazy val assemblySettings = Seq(
     case _                   => MergeStrategy.first
   }
 )
+// entrypoint.sh is automatically copied into /opt/docker by sbt-native-packager.
+//ExecCmd("RUN", "chmod", "u+x", "/opt/docker/entrypoint.sh")
+// Docker / labels := Map(
+//   "org.opencontainers.image.source"  -> "https://github.com/your-org/your-repo",
+//   "org.opencontainers.image.version" -> version.value
+// )
 
 // ==================== DOCKER ========================
 lazy val dockerSettings = Seq(
   Docker / packageName := s"domain/${name.value}",
   Docker / version := version.value,
+  Docker / daemonUserUid := None,
+  Docker / daemonUser := "root",
+  dockerExposedVolumes := Seq("/data"),
+  dockerUpdateLatest := true,
+  dockerChmodType := DockerChmodType.UserGroupWriteExecute,
   dockerBaseImage := "eclipse-temurin:21-jre",
+  // dockerBaseImage := "amazoncorretto:17"
+  // dockerBaseImage := "openj"
+  Universal / mappings += file(
+    "entrypoint.sh"
+  ) -> "entrypoint.sh", // When creating the Universal package, include the file entrypoint.sh from my project root, and place it in the root of the packaged archive
+  dockerEntrypoint := Seq("/opt/docker/entrypoint.sh"),
   dockerExposedPorts := Seq(8080),
+  // dockerRepository := Some("docker.io"),
   Universal / javaOptions ++= Seq(
     "-J-XX:MaxRAMPercentage=75.0",
     "-J-XX:+UseG1GC",
     "-J-XX:MaxGCPauseMillis=200",
     "-J-Dlogback.configurationFile=/opt/docker/conf/logback.xml"
   )
-  // Docker / labels := Map(
-  //   "org.opencontainers.image.source"  -> "https://github.com/your-org/your-repo",
-  //   "org.opencontainers.image.version" -> version.value
-  // )
 )
 
 // ==================== TESTKIT =======================
@@ -159,14 +193,9 @@ lazy val testkit = project
   .settings(prodSettings, name := "testkit", publish / skip := true)
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % V.scalatest,
-      "org.scalacheck" %% "scalacheck" % V.scalacheck,
-      "org.testcontainers" % "testcontainers" % V.testcontainers,
-      "org.testcontainers" % "postgresql" % V.testcontainers,
-      "com.dimafeng" %% "testcontainers-scala-scalatest" % V.tcScala, // optional, handy
-      "com.dimafeng" %% "testcontainers-scala-postgresql" % V.tcScala, // optional, handy
-      "com.github.tomakehurst" % "wiremock-jre8" % V.wiremock,
-      "ch.qos.logback" % "logback-classic" % V.logback % Test
+      scalaTest % Test,
+      logback % Test,
+      slf4j % Test
     )
   )
 
@@ -178,12 +207,23 @@ lazy val common = project
   .settings(prodSettings, name := "common")
   .dependsOn(testkit % "test->test")
   .settings(
-    deps(
-      "org.typelevel" %% "cats-effect" % V.catsEffect,
-      "com.github.pureconfig" %% "pureconfig-core" % V.pureconfig,
-      "org.slf4j" % "slf4j-api" % V.slf4j,
-      "ch.qos.logback" % "logback-classic" % V.logback % Runtime,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+    libraryDependencies ++= Seq(
+      catsEffect,
+      pureconfig,
+      slf4j,
+      logback % Runtime,
+      scalaTest % Test
+    ),
+    javacOptions ++= Seq(
+      "-Xlint",
+      "-J-Xss256M",
+      "-encoding",
+      "UTF-8",
+      "-XDignore.symbol.file"
+    ),
+    javaOptions ++= Seq(
+      "-Djdk.internal.httpclient.debug=false",
+      "-Djdk.httpclient.HttpClient.log=errors"
     )
   )
 
@@ -194,9 +234,10 @@ lazy val protocols = project
   .dependsOn(common, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % V.jsoniter,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % V.jsoniter,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      sttpJsoniter,
+      jsoniter,
+      jsoniterMacros,
+      scalaTest % Test
     )
   )
 
@@ -207,11 +248,11 @@ lazy val core = project
   .dependsOn(common, protocols, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "org.tpolecat" %% "doobie-core" % V.doobie,
-      "org.tpolecat" %% "doobie-hikari" % V.doobie,
-      "org.tpolecat" %% "doobie-postgres" % V.doobie,
-      "org.flywaydb" % "flyway-core" % V.flyway,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      catsEffect,
+      postgres,
+      skunkCore,
+      flyway,
+      scalaTest % Test
     )
   )
 
@@ -234,9 +275,11 @@ lazy val ledger = project
   .dependsOn(common, protocols, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "org.tpolecat" %% "doobie-core" % V.doobie,
-      "org.tpolecat" %% "doobie-postgres" % V.doobie,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      catsEffect,
+      postgres,
+      skunkCore,
+      flyway,
+      scalaTest % Test
     )
   )
 
@@ -247,9 +290,9 @@ lazy val payments = project
   .dependsOn(common, protocols, ledger, accounts, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client4" %% "core" % V.sttp4,
-      "com.softwaremill.sttp.client4" %% "cats" % V.sttp4,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      sttpCore,
+      sttpCats,
+      scalaTest % Test
     )
   )
 
@@ -260,7 +303,7 @@ lazy val compliance = project
   .dependsOn(common, protocols, customers, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      scalaTest % Test
     )
   )
 
@@ -271,9 +314,11 @@ lazy val loans = project
   .dependsOn(common, protocols, core, accounts, ledger, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "org.tpolecat" %% "doobie-core" % V.doobie,
-      "org.tpolecat" %% "doobie-postgres" % V.doobie,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      catsEffect,
+      postgres,
+      skunkCore,
+      flyway,
+      scalaTest % Test
     )
   )
 
@@ -284,7 +329,7 @@ lazy val webhooks = project
   .dependsOn(common, protocols, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+      scalaTest % Test
     )
   )
 
@@ -308,23 +353,136 @@ lazy val api = project
   )
   .settings(
     Compile / mainClass := Some("com.domain.api.Main"),
-    deps(
-      "org.typelevel" %% "cats-effect" % V.catsEffect,
-      "org.http4s" %% "http4s-ember-server" % V.http4s,
-      "org.http4s" %% "http4s-dsl" % V.http4s,
-      "com.softwaremill.sttp.tapir" %% "tapir-core" % V.tapir,
-      "com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % V.tapir,
-      "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % V.tapir,
-      "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % V.tapir,
-      "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % V.tapir,
-      "org.scalatest" %% "scalatest" % V.scalatest % Test
+    libraryDependencies ++= Seq(
+      catsEffect,
+      `http4s-dsl`,
+      emberServer,
+      emberClient,
+      tapirCore,
+      tapirHttp4sServer,
+      tapirJsoniterScala,
+      tapirOpenAPIDocs,
+      tapirSwaggerUIBundle,
+      scalaTest % Test
     )
   )
 
-// root aggregator (no publish)
-// lazy val root = project.in(file("."))
-//   .aggregate(
-//     common, protocols, core, customers, accounts, ledger,
-//     payments, compliance, loans, webhooks, api, testkit
-//   )
-//   .settings(name := "bank", publish / skip := true)
+// Define a custom task
+lazy val parTestGroup = inputKey[Unit]("Runs a single test group")
+parTestGroup := (Def.inputTaskDyn {
+  // Takes two parameters: groupId (which group to run) and numberOfGroups (total groups)
+  val List(groupId, numberOfGroups) = complete.DefaultParsers
+    .spaceDelimited("<arg>")
+    .parsed
+    .map(_.toInt)
+
+  // Retrieves all available tests
+  val allTests = (Test / definedTests).value
+
+  // Calculates how many tests should be in each group
+  val numberOfTests = allTests.size
+  val numberOfTestsPerGroup =
+    if (numberOfTests % numberOfGroups == 0) {
+      numberOfTests / numberOfGroups
+    } else { (numberOfTests / numberOfGroups) + 1 }
+
+  // Divides tests into groups
+  val groups = allTests.grouped(numberOfTestsPerGroup).toArray
+
+  val groupToRun = groups(groupId - 1)
+  val argForTestOnly = " " + groupToRun.map(_.name).mkString(" ")
+
+  streams.value.log.info(s"Running testOnly:$argForTestOnly")
+
+  // Runs only the specified group using SBT's testOnly task
+  Def.taskDyn {
+    (Test / testOnly).toTask(argForTestOnly)
+  }
+}).evaluated
+
+lazy val `finicity-codegen` = (project in file("modules/finicity-codegen"))
+  .enablePlugins(OpenApiGeneratorPlugin)
+  .settings(
+    name := "finicity-codegen",
+    // openApiInputSpec := "src/main/resources/swagger.json",
+    // openApiGeneratorName := "sclala-sttp-client4",
+    openApiModelNamePrefix := "",
+    openApiModelNameSuffix := "",
+    openApiGenerateMetadata := Some(false),
+    openApiGenerateMetadata := SettingDisabled,
+    // Use the same JSON so CLI and SBT stay in sync
+    openApiConfigFile := ((Compile / baseDirectory).value / "config.json").getPath,
+    openApiIgnoreFileOverride := s"${baseDirectory.value.getPath}/openapi-ignore-file",
+
+    // Put generated sources where SBT expects managed sources
+    openApiOutputDir := ((Compile / baseDirectory).value / "src/main/scala").getAbsolutePath,
+    openApiGenerateModelTests := SettingDisabled,
+    openApiGenerateApiTests := SettingDisabled,
+    openApiValidateSpec := SettingDisabled,
+    // Fail fast on bad specs (optional but recommended)
+    // openApiValidateSpec := Some(true),
+    // Compile / sourceGenerators += openApiGenerate.taskValue,
+    (Compile / compile) := ((Compile / compile) dependsOn generate).value,
+    // (Compile/compile) := ((compile in Compile) dependsOn openApiGenerate).value
+
+    // Define the simple generate command to generate full client codes
+    generate := {
+      val _ = openApiGenerate.value
+
+      // Delete the generated build.sbt file so that it is not used for our sbt config
+      val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
+      if (buildSbtFile.exists()) {
+        buildSbtFile.delete()
+      }
+    },
+    libraryDependencies ++= Seq(
+      sttpJsoniter,
+      jsoniter,
+      jsoniterMacros,
+      jsoniterCirce
+    )
+  )
+
+lazy val `clickbank-codegen` = (project in file("modules/clickbank-codegen"))
+  .enablePlugins(OpenApiGeneratorPlugin)
+  .settings(
+    name := "clickbank-codegen",
+    // openApiInputSpec := "src/main/resources/swagger.json",
+    // openApiGeneratorName := "sclala-sttp-client4",
+    openApiModelNamePrefix := "",
+    openApiModelNameSuffix := "",
+    openApiGenerateMetadata := Some(false),
+    openApiRemoveOperationIdPrefix := Some(true),
+    openApiGenerateMetadata := SettingDisabled,
+    // Use the same JSON so CLI and SBT stay in sync
+    openApiConfigFile := ((Compile / baseDirectory).value / "config.json").getPath,
+    openApiIgnoreFileOverride := s"${baseDirectory.value.getPath}/openapi-ignore-file",
+
+    // Put generated sources where SBT expects managed sources
+    openApiOutputDir := ((Compile / baseDirectory).value / "src/main/scala").getAbsolutePath,
+    openApiGenerateModelTests := SettingDisabled,
+    openApiGenerateApiTests := SettingDisabled,
+    openApiValidateSpec := SettingDisabled,
+    // Fail fast on bad specs (optional but recommended)
+    // openApiValidateSpec := Some(true),
+    // Compile / sourceGenerators += openApiGenerate.taskValue,
+    (Compile / compile) := ((Compile / compile) dependsOn generate).value,
+    // (Compile/compile) := ((compile in Compile) dependsOn openApiGenerate).value
+
+    // Define the simple generate command to generate full client codes
+    generate := {
+      val _ = openApiGenerate.value
+
+      // Delete the generated build.sbt file so that it is not used for our sbt config
+      val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
+      if (buildSbtFile.exists()) {
+        buildSbtFile.delete()
+      }
+    },
+    libraryDependencies ++= Seq(
+      sttpJsoniter,
+      jsoniter,
+      jsoniterMacros,
+      jsoniterCirce
+    )
+  )

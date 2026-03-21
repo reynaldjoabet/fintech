@@ -1,67 +1,37 @@
-name: autodeploy
+name: Scala CI
 
 on:
   push:
-    branches: [main]  # deploys only from main
-  workflow_dispatch:  # allow manual triggers
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 permissions:
   contents: read
-  packages: write
-  id-token: write  # for future OIDC use (optional)
 
 jobs:
-  autodeploy:
-    name: Build & Deploy Scala App
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        java: [17, 21]  # test against both Java 17 and 21
+        distribution: ['temurin', 'zulu', 'corretto', 'microsoft']  # test across JDK vendors
+      fail-fast: false  # continue testing even if one combination fails
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 1
 
-      - name: Set up Java 17
+      - name: Set up JDK ${{ matrix.java }} (${{ matrix.distribution }})
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: 17
-          cache: sbt  
+          distribution: ${{ matrix.distribution }}
+          java-version: ${{ matrix.java }}
+          cache: sbt
 
-      - name: Set up Sbt    
+      - name: Set up sbt
         uses: sbt/setup-sbt@v1
-      # - name: Build assembly JAR
-      #   run: sbt clean assembly
-      #   env:
-      #     SBT_OPTS: -Xmx2G
 
-      # - name: Login to GitHub Container Registry
-      #   uses: docker/login-action@v3
-      #   with:
-      #     registry: ghcr.io
-      #     username: ${{ github.actor }}
-      #     password: ${{ secrets.GITHUB_TOKEN }}
-
-      # - name: Build and push production image
-      #   uses: docker/build-push-action@v6
-      #   with:
-      #     context: .
-      #     push: true
-      #     tags: |
-      #       ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-      #       ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.sha }}
-      #     file: ./Dockerfile
-      #     provenance: true  # enables SBOM/SLSA provenance
-      #     sbom: true
-
-      # - name: Deploy to Production (example)
-      #   if: github.ref == 'refs/heads/main'
-      #   env:
-      #     IMAGE: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}:latest
-      #     DEPLOY_API_KEY: ${{ secrets.PRODUCTION_DEPLOY_API_KEY }}
-      #   run: |
-      #     echo "Deploying $IMAGE to production..."
-      #     # Example deploy command (replace with your real deployment tool)
-      #     # flyctl deploy --image "$IMAGE"
-      #     # kubectl set image deployment/myapp myapp=$IMAGE
+      - name: Run tests
+        run: sbt compile test
