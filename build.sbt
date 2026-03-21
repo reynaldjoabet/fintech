@@ -103,7 +103,7 @@ ThisBuild / versionScheme := Some("early-semver")
 // Align Java toolchain & container (set to 17 if you deploy on 17)
 //ThisBuild / javacOptions := Seq("-release", "21")
 
-ThisBuild / javacOptions := Seq("-source", "21", "-target", "21")
+ThisBuild / javacOptions := Seq("-source", "17", "-target", "17")
 //It locks your Java source + bytecode compatibility to JDK 17.
 //Ensures identical behaviour in CI, local dev, and Docker (17-based runtime).
 lazy val isCi = false //sys.enVersion.get("CI").contains("true")
