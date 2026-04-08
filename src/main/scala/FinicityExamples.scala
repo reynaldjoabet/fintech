@@ -4,27 +4,28 @@ import finicity.models.*
 
 object FinicityExamples {
   // Core examples for common/generated Finicity models
-  val exampleAccount: Account = Account(
+  val exampleAccount: CustomerAccount = CustomerAccount(
     id = "acct-1",
     number = "000111222",
+    accountNumberDisplay = "000111222",
     name = "Example Account",
-    balance = 1234.56,
+    balance = Some(1234.56),
     `type` = "checking",
     status = "active",
     customerId = "cust-1",
     institutionId = "inst-1",
-    createdDate = 1622548800,
+    createdDate = 1622548800L,
     currency = "USD",
     institutionLoginId = 1,
-    displayPosition = 0
+    displayPosition = Some(0)
   )
 
-  val exampleAccountDetail: AccountDetail = AccountDetail(
-    interestMarginBalance = 0.0,
-    availableCashBalance = 1234.56,
-    vestedBalance = 0.0,
-    currentLoanBalance = 0.0,
-    availableBalanceAmount = 1234.56
+  val exampleAccountDetail: AccountDetails = AccountDetails(
+    interestMarginBalance = Some(0.0),
+    availableCashBalance = Some(1234.56),
+    vestedBalance = Some(0.0),
+    currentLoanBalance = Some(0.0),
+    availableBalanceAmount = Some(1234.56)
   )
 
   val exampleCategorization: Categorization = Categorization(
@@ -44,42 +45,37 @@ object FinicityExamples {
     customerId = 1L,
     status = "active",
     description = "Test txn",
-    memo = "",
-    `type` = TransactionType.debit,
-    interestAmount = 0.0,
-    principalAmount = 0.0,
-    feeAmount = 0.0,
-    escrowAmount = 0.0,
-    unitQuantity = 0,
-    postedDate = java.time.LocalDate.now(),
-    transactionDate = java.time.LocalDate.now(),
-    createdDate = java.time.LocalDate.now(),
-    categorization = exampleCategorization,
-    checkNum = 0,
-    incomeType = "",
-    subaccountSecurityType = "",
-    commissionAmount = 0.0,
-    splitDenominator = 0.0,
-    splitNumerator = 0.0,
-    sharesPerContract = 0.0,
-    taxesAmount = 0.0,
-    unitPrice = 0.0,
-    currencySymbol = "$",
-    subAccountFund = "",
-    ticker = "",
-    securityId = "",
-    securityIdType = "",
-    investmentTransactionType = InvestmentTransactionTypes.cancel,
-    effectiveDate = "",
-    firstEffectiveDate = ""
+    createdDate = 1622548800L,
+    memo = Some(""),
+    `type` = Some("debit"),
+    interestAmount = Some(0.0),
+    principalAmount = Some(0.0),
+    feeAmount = Some(0.0),
+    escrowAmount = Some(0.0),
+    unitQuantity = Some(0.0),
+    postedDate = Some(1622548800L),
+    transactionDate = Some(1622548800L),
+    categorization = Some(exampleCategorization),
+    checkNum = Some("0"),
+    incomeType = Some(""),
+    subaccountSecurityType = Some(""),
+    commissionAmount = Some(0),
+    splitDenominator = Some(0.0),
+    splitNumerator = Some(0.0),
+    sharesPerContract = Some(0.0),
+    taxesAmount = Some(0),
+    unitPrice = Some(0.0),
+    currencySymbol = Some("$"),
+    subAccountFund = Some(""),
+    ticker = Some(""),
+    securityId = Some(""),
+    securityIdType = Some(""),
+    investmentTransactionType = Some("cancel"),
+    effectiveDate = Some(0L),
+    firstEffectiveDate = Some(0L)
   )
 
-  val exampleAccountIDs: AccountIDConsumerAttributes =
-    AccountIDConsumerAttributes(
-      accountIds = Seq("acct-1", "acct-2")
-    )
-
-  val exampleOwner: AccountOwnerv1 = AccountOwnerv1(
+  val exampleOwner: AccountOwner = AccountOwner(
     ownerName = "John Doe",
     ownerAddress = "123 Main St"
   )
@@ -89,31 +85,32 @@ object FinicityExamples {
     realAccountNumber = "000111222"
   )
 
-  val exampleAddCustomerReq: AddCustomerRequest = AddCustomerRequest(
+  val exampleAddCustomerReq: NewCustomer = NewCustomer(
     username = "jdoe",
     firstName = Some("John"),
     lastName = Some("Doe"),
     applicationId = None
   )
 
-  val exampleAddCustomerResp: AddCustomerResponse = AddCustomerResponse(
-    id = 1L,
+  val exampleAddCustomerResp: CreatedCustomer = CreatedCustomer(
+    id = "1",
     username = "jdoe",
-    createdDate = java.time.Instant.now().toString
+    createdDate = 1622548800L
   )
 
-  val exampleAppFIStatus: AppFIStatus = AppFIStatus(
-    id = 1L,
-    decryptionKeyActivated = true,
-    createdDate = 1622548800L,
-    lastModifiedDate = 1622548800L,
-    status = true,
-    abbrvName = Some("FIN"),
-    logoUrl = None
-  )
+  val exampleAppFIStatus: AppFinancialInstitutionStatus =
+    AppFinancialInstitutionStatus(
+      id = 1L,
+      decryptionKeyActivated = true,
+      createdDate = 1622548800L,
+      lastModifiedDate = 1622548800L,
+      status = true,
+      abbrvName = Some("FIN"),
+      logoUrl = None
+    )
 
-  val exampleAppRegistrationReq: AppRegistrationRequest =
-    AppRegistrationRequest(
+  val exampleAppRegistrationReq: Application =
+    Application(
       appDescription = "Example app",
       appName = "Example",
       appUrl = "https://example.com",
@@ -127,15 +124,9 @@ object FinicityExamples {
       image = ""
     )
 
-  val exampleAppRegistrationResp: AppRegistrationResponse =
-    AppRegistrationResponse(
-      preAppId = 1L,
-      status = "P"
-    )
-
   val exampleAppStatus: AppStatus = AppStatus(
     partnerId = "partner-1",
-    preAppId = 1L,
+    preAppId = "1",
     appName = "Example",
     submittedDate = 1622548800L,
     modifiedDate = 1622548800L,
@@ -146,12 +137,13 @@ object FinicityExamples {
     institutionDetails = None
   )
 
-  val exampleAssetSummary: AssetSummaryAccountType = AssetSummaryAccountType(
-    `type` = "checking",
-    currentBalance = 1000.0,
-    twoMonthAverage = 900.0,
-    sixMonthAverage = 800.0,
-    beginningBalance = 500.0
-  )
+  val exampleAssetSummary: PrequalificationReportAssetSummary =
+    PrequalificationReportAssetSummary(
+      `type` = Some("checking"),
+      currentBalance = 1000.0,
+      twoMonthAverage = 900.0,
+      sixMonthAverage = Some(800.0),
+      beginningBalance = 500.0
+    )
 
 }

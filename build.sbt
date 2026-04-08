@@ -91,6 +91,7 @@ lazy val root = (project in file("."))
   .settings(publish / skip := true)
 
 val generate = taskKey[Unit]("generate code from APIs")
+val cleanGenerated = taskKey[Unit]("delete previously generated api/model code")
 
 // =================== COMMON SETTINGS & DEPENDENCIES ===================
 
@@ -426,15 +427,25 @@ lazy val `finicity-codegen` = (project in file("modules/finicity-codegen"))
     // (Compile/compile) := ((compile in Compile) dependsOn openApiGenerate).value
 
     // Define the simple generate command to generate full client codes
-    generate := {
-      val _ = openApiGenerate.value
-
-      // Delete the generated build.sbt file so that it is not used for our sbt config
-      val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
-      if (buildSbtFile.exists()) {
-        buildSbtFile.delete()
-      }
+    cleanGenerated := {
+      val outputDir = file(openApiOutputDir.value)
+      val dirsToClean =
+        Seq(outputDir / "finicity" / "api", outputDir / "finicity" / "models")
+      dirsToClean.foreach(dir => IO.delete(dir))
     },
+    generate := Def
+      .sequential(
+        cleanGenerated,
+        Def.task {
+          val _ = openApiGenerate.value
+          // Delete the generated build.sbt file so that it is not used for our sbt config
+          val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
+          if (buildSbtFile.exists()) {
+            buildSbtFile.delete()
+          }
+        }
+      )
+      .value,
     libraryDependencies ++= Seq(
       sttpJsoniter,
       jsoniter,
@@ -470,15 +481,25 @@ lazy val `clickbank-codegen` = (project in file("modules/clickbank-codegen"))
     // (Compile/compile) := ((compile in Compile) dependsOn openApiGenerate).value
 
     // Define the simple generate command to generate full client codes
-    generate := {
-      val _ = openApiGenerate.value
-
-      // Delete the generated build.sbt file so that it is not used for our sbt config
-      val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
-      if (buildSbtFile.exists()) {
-        buildSbtFile.delete()
-      }
+    cleanGenerated := {
+      val outputDir = file(openApiOutputDir.value)
+      val dirsToClean =
+        Seq(outputDir / "clickbank" / "api", outputDir / "clickbank" / "models")
+      dirsToClean.foreach(dir => IO.delete(dir))
     },
+    generate := Def
+      .sequential(
+        cleanGenerated,
+        Def.task {
+          val _ = openApiGenerate.value
+          // Delete the generated build.sbt file so that it is not used for our sbt config
+          val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
+          if (buildSbtFile.exists()) {
+            buildSbtFile.delete()
+          }
+        }
+      )
+      .value,
     libraryDependencies ++= Seq(
       sttpJsoniter,
       jsoniter,

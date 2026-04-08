@@ -7,47 +7,42 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.{
 }
 
 import finicity.models.*
-import finicity.api.AccountOwnerApi
-import finicity.api.AnalyticsAndAttributesApi
+import finicity.api.IdentityApi
+import finicity.api.AnalyticsApi
 import finicity.api.AccountsApi
-import finicity.api.AppRegistrationAndOAuthMigrationApi
+import finicity.api.AppRegistrationApi
 import finicity.api.AuthenticationApi
-import finicity.api.AssetApi
+import finicity.api.VerifyAssetsApi
 import finicity.api.BankStatementsApi
 import finicity.api.CashFlowApi
 import finicity.api.ConnectApi
-import finicity.api.ConsumerApi
-import finicity.api.CustomerApi
-import finicity.api.DeprecatedApi
-import finicity.api.GetPortfoliosApi
-import finicity.api.GetReportsByConsumerApi
-import finicity.api.GetReportsByCustomerApi
+import finicity.api.ConsumersApi
+import finicity.api.CustomersApi
+import finicity.api.PortfoliosApi
+import finicity.api.ReportsApi
 import finicity.api.InstitutionsApi
-import finicity.api.LiabilitiesApi
 import finicity.api.PayStatementsApi
 import finicity.api.PaymentsApi
 import finicity.api.TransactionsApi
 import finicity.api.TxPushApi
-import finicity.api.VerifyAssetsApi
-import finicity.api.VerifyEmploymentApi
 import finicity.api.VerifyIncomeAndEmploymentApi
-import finicity.api.VerifyIncomeApi
-object Main extends Greeting with App {
+object Main extends App with Greeting {
   println(greeting)
 
-  val account = Account(
+  val account = CustomerAccount(
     id = "123",
     number = "456",
+    accountNumberDisplay = "456",
     name = "My Account",
-    balance = 1000.0,
+    balance = Some(1000.0),
     `type` = "Checking",
     status = "Active",
     customerId = "789",
     institutionId = "101112",
-    createdDate = 1625097600,
+    createdDate = 1625097600L,
     currency = "USD",
     institutionLoginId = 131415,
-    displayPosition = 1
+    displayPosition = Some(1)
   )
 
 }
