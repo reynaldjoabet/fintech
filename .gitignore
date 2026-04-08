@@ -35,4 +35,6 @@ web/.DS_Store
 .scala-build/
 
 /modules/finicity-codegen/src/main/scala/
+!/modules/finicity-codegen/src/main/scala/.openapi-generator-ignore
+!/modules/finicity-codegen/src/main/scala/finicity/Helpers.scala
 /modules/clickbank-codegen/src/main/scala/

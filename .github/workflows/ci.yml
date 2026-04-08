@@ -1,23 +1,37 @@
-name: ci
+name: Scala CI
+
 on:
-  push: { branches: [ main ] }
+  push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v5
+    strategy:
+      matrix:
+        java: [17, 21]  # test against both Java 17 and 21
+        distribution: ['temurin', 'zulu', 'corretto', 'microsoft']  # test across JDK vendors
+      fail-fast: false  # continue testing even if one combination fails
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK ${{ matrix.java }} (${{ matrix.distribution }})
+        uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: "21"
+          distribution: ${{ matrix.distribution }}
+          java-version: ${{ matrix.java }}
           cache: sbt
 
-      - name: Set up Sbt    
+      - name: Set up sbt
         uses: sbt/setup-sbt@v1
 
-      - name: Compile (runs codegen via sourceGenerators)
-        run: sbt -v +compile
-
-    
+      - name: Run tests
+        run: sbt compile test

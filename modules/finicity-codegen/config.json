@@ -2,6 +2,7 @@
   "generatorName": "scala-sttp4-jsoniter",
   "inputSpec": "modules/finicity-codegen/finicity.yaml",
   "outputDir": "modules/finicity-codegen/src/main/scala",
+  "templateDir": "modules/finicity-codegen/custom-templates",
   "mainPackage": "",
   "apiPackage": "finicity.api",
   "modelPackage": "finicity.models",
