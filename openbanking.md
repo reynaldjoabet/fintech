@@ -1,5 +1,18 @@
-## Open Banking
+# Open Banking
+
 Open Banking: This initiative allows third-party fintechs to securely access a customer's banking data with their permission. This fosters innovation and enables the creation of new financial services, like personal finance management tools and improved lending platforms.
+
+## Contents
+- [Payment rails overview](#payment-rails-overview)
+- [What is Open Banking?](#what-is-open-banking)
+- [Banking-as-a-Service (BaaS)](#banking-as-a-service-baas)
+- [Aside: OpenAPI codegen notes](#aside-openapi-codegen-notes)
+- [Open Banking — recap](#open-banking--recap)
+- [Bundled vs. unbundled banking](#bundled-vs-unbundled-banking)
+- [Regulation (PSD2)](#regulation-psd2)
+- [Open Finance](#open-finance)
+
+## Payment rails overview
 
 ### Card-based payments
 
@@ -19,7 +32,7 @@ Use cases: e-commerce checkout, POS, subscriptions.
 
 ### Bank transfers (ACH, SEPA, SWIFT)
 
-- Flow: Customer => Bank (ACH/SEPA credit) => Clearing house => Recipient’s bank.
+- Flow: Customer => Bank (ACH/SEPA credit) => Clearing house => Recipient's bank.
 Use cases: payroll, bill payments, B2B, payouts.
 - Gaps:
  - Slow (1–3 days).
@@ -32,7 +45,7 @@ Use cases: payroll, bill payments, B2B, payouts.
  - Plaid/TrueLayer: APIs to initiate & verify bank transfers via open banking
 
 
- ### Instant / Real-time payments
+### Instant / Real-time payments
 
 Flow: Customer => Bank => Real-Time Payments Network (RTP, Faster Payments, UPI, Pix) => Recipient Bank => Instant settlement.
 
@@ -47,7 +60,7 @@ Use cases: gig worker payouts, P2P, merchant settlement.
  - Stripe Treasury, Payoneer: embedded payouts for platforms.
  - Banking-as-a-service (Marqeta, Unit, Solaris): give fintechs API access to RTP rails.
 
- ### Cross-border remittances
+### Cross-border remittances
 
 - Flow: Sender => Remittance provider => Local payout partner => Recipient.
 
@@ -62,34 +75,40 @@ Use cases: migrant workers, family support, B2B trade.
  - Ripple/Stellar: blockchain-based cross-border rails.
 
 
-A regulatory and technical framework (starting in the EU/UK, now spreading worldwide) that requires banks to expose customer account and payment data to third parties via standardized APIs, but only with the customer’s explicit consent.
+## What is Open Banking?
+
+A regulatory and technical framework (starting in the EU/UK, now spreading worldwide) that requires banks to expose customer account and payment data to third parties via standardized APIs, but only with the customer's explicit consent.
 
 Goal: Increase competition and innovation in financial services by allowing fintechs to build products on top of bank data.
 
 Example use case: A budgeting app that connects to your bank account to analyze your spending, or a payment initiation service that lets you pay directly from your bank account without a card.
 
-`Open Banking is about data and payment access`
+> Open Banking is about data and payment access.
 
-Banking-as-a-Service (BaaS)
+## Banking-as-a-Service (BaaS)
+
 A business model where licensed banks provide their regulated banking infrastructure (accounts, payments, cards, compliance, etc.) to third parties via APIs.
 
 Goal: Allow fintechs or non-banks to embed full banking functionality into their apps without needing their own banking license.
 
-Example use case: A ride-sharing company issuing debit cards to drivers, or a fintech launching a neobank app with savings accounts and payments using a partner bank’s infrastructure
+Example use case: A ride-sharing company issuing debit cards to drivers, or a fintech launching a neobank app with savings accounts and payments using a partner bank's infrastructure.
 
-```sh
-Open Banking implies that banks are obliged to open their public APIs and allow third-party payment service providers to initiate payments and access the account information of their clients, subject to their consent. The Open Banking framework opens up plenty of opportunities for the Cameroonian financial market: credit and non-credit financial institutions, various payment service providers, payment agents, and e-money institutions.
-```
+> Open Banking implies that banks are obliged to open their public APIs and allow third-party payment service providers to initiate payments and access the account information of their clients, subject to their consent. The Open Banking framework opens up plenty of opportunities for the Cameroonian financial market: credit and non-credit financial institutions, various payment service providers, payment agents, and e-money institutions.
 
+---
+
+## Aside: OpenAPI codegen notes
+
+> The section below is unrelated to Open Banking — it captures notes about generating Scala clients from OpenAPI specs.
 
 ### When config.json shines
 - Portability across tools: The same config works with `openapi-generator-cli` (Docker/CLI), SBT, Maven, Gradle. This makes CI/CD or polyglot repos simpler.
-- Single source of truth: All generator-specific knobs (`generatorName`, `jsonLibrary`, `additionalProperties`, vendor templates) live in one file that doesn’t depend on SBT syntax.
-- Stable against plugin churn: Generator options evolve frequently. A JSON config won’t break if an SBT key is renamed or not exposed.
+- Single source of truth: All generator-specific knobs (`generatorName`, `jsonLibrary`, `additionalProperties`, vendor templates) live in one file that doesn't depend on SBT syntax.
+- Stable against plugin churn: Generator options evolve frequently. A JSON config won't break if an SBT key is renamed or not exposed.
 - Cleaner reviews: Spec + config diff separately from Scala build logic. Fewer noisy SBT reloads due to large setting blocks.
 - Easy templating: You can keep multiple configs (e.g., `sttp3-circe.json`, `sttp4-jsoniter.json`) and switch by flipping a path.
 
-`config.json (Scala 3 + sttp v4 + Circe)`
+**config.json (Scala 3 + sttp v4 + Circe)**
 
 ```json
 {
@@ -131,7 +150,7 @@ e.g. with
  files land in `target/openapi/src/main/scala/com/yourco/...`
 
 
-`mainPackage` — the top-level/root package. If you don’t set the others, this value is used to define `apiPackage`, `modelPackage`, and `invokerPackage` (generator default root is org.openapitools.client). 
+`mainPackage` — the top-level/root package. If you don't set the others, this value is used to define `apiPackage`, `modelPackage`, and `invokerPackage` (generator default root is org.openapitools.client). 
 `apiPackage` — where the endpoint classes (one per tag, with methods for each operation) go. 
 `modelPackage` — where the schema models (case classes/enums for request/response bodies) go. 
 `invokerPackage` — the infrastructure/glue used by the client (common support code, request/response helpers, auth/serialization helpers, etc.); effectively the root package for generated code in many generators.
@@ -170,7 +189,7 @@ e.g. with
   }
 }
 ```
-```sbt
+```scala
 lazy val codegenPayroll = project
   .in(file("modules/codegen-payroll"))
   .enablePlugins(OpenApiGeneratorPlugin)
@@ -236,21 +255,30 @@ docker run --rm -v "$PWD":/local openapitools/openapi-generator-cli \
   generate -c /local/modules/codegen-payroll/openapi/config.json
 ```
 
+---
+
+## Open Banking — recap
+
 Open banking is a regulatory and industry framework that allows consumers to securely share their financial data (like balances, transactions, or payment initiation) with third-party apps through APIs, with their explicit consent.
+
 Goal: Give customers more control over their financial data and promote innovation and competition among financial services.
-Core idea: Banks are required (or encouraged) to provide standardized, secure APIs that let authorized third parties (like budgeting apps, lenders, or payment services) access financial data or initiate transactions
 
+Core idea: Banks are required (or encouraged) to provide standardized, secure APIs that let authorized third parties (like budgeting apps, lenders, or payment services) access financial data or initiate transactions.
 
-with traditional banking,the focus is on efficiency and the mass market. All banking products are bundled together..current account, trading account,mortage,retirement account,saving account... if you have one account, you will likely have the other at the same bank
+## Bundled vs. unbundled banking
 
-With open banking,open finance, we take the mass market offer and unbundle it.  we unbundle in terms of apis; credit card api,saving account api,current account api.. this is what we call open banking..
+With traditional banking, the focus is on efficiency and the mass market. All banking products are bundled together — current account, trading account, mortgage, retirement account, savings account. If you have one account, you will likely have the other at the same bank.
 
-with open finane, we have retirement api,trading api,mortage and loans api
+With open banking and open finance, we take the mass-market offer and unbundle it. We unbundle in terms of APIs: credit card API, savings account API, current account API. This is what we call open banking.
 
+With open finance, we have retirement API, trading API, mortgage and loans API.
 
-EU the Payment Services Directive 2/PSD2 framework mandates banks open up certain data and allow payment initiation.
+## Regulation (PSD2)
 
-Open Finance takes the principles of Open Banking further: it expands the data‐sharing and interoperability to a broader range of financial products and services — not just bank accounts, but also savings, investments, pensions, insurance, mortgages, loans, etc
+In the EU, the Payment Services Directive 2 (PSD2) framework mandates that banks open up certain data and allow payment initiation.
 
+## Open Finance
 
-It aims to enable more holistic consumer visibility and control of their entire financial footprint, and to allow third parties (with consent) to build richer services that use all of someone’s financial data, not just banking
+Open Finance takes the principles of Open Banking further: it expands the data-sharing and interoperability to a broader range of financial products and services — not just bank accounts, but also savings, investments, pensions, insurance, mortgages, loans, etc.
+
+It aims to enable more holistic consumer visibility and control of their entire financial footprint, and to allow third parties (with consent) to build richer services that use all of someone's financial data, not just banking.

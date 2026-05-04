@@ -1,32 +1,36 @@
 # Fintech (Financial Technology)
-- Broad category that covers all uses of technology in financial services.
-- Includes payments, but also things like:
-  - Lending/credit (e.g. Klarna, LendingClub)
-  - Banking tech (neobanks like Monzo, Chime)
-  - Wealth/investing (Robinhood, Wealthfront)
-  - Insurance tech (Lemonade, Hippo)
-  - Compliance/regtech (identity verification, KYC, AML)
-  - Crypto & blockchain
+Broad category that covers all uses of technology in financial services includes payments, but also things like:
+- Lending/credit (e.g. Klarna, LendingClub)
+- Banking tech (neobanks like Monzo, Chime)
+- Wealth/investing (Robinhood, Wealthfront)
+- Insurance tech (Lemonade, Hippo)
+- Compliance/regtech (identity verification, KYC, AML)
+- Crypto & blockchain
+
+## Contents
+- [Payments](#payments)
+- [Consumer-to-Business (C2B)](#consumer-to-business-c2b)
+- [Example Use Cases](#example-use-cases)
+- [Goal: API-first bank](#goal-api-first-bank)
+- [Banking-as-a-Service (BaaS)](#banking-as-a-service-baas)
+- [Public API (api.domain.com/v1)](#public-api-apidomaincomv1)
+- [Databases](#databases)
+- [Open banking](#open-banking)
+- [How open banking works](#how-open-banking-works)
 
 ## Payments
-- A subset of fintech, focused only on moving money between parties.
-Examples:
-- Card processing (Visa, Stripe)
-- Mobile wallets (Apple Pay, Google Pay)
-- Cross-border transfers (Wise, PayPal)
-- Merchant acquiring / PoS
+A subset of fintech, focused only on moving money between parties.
 
-- 💳 Payments
-  - Card processing (credit, debit, prepaid)
-  - Mobile & digital wallets (Apple Pay, Google Pay, Samsung Pay)
-  - Bank transfers (ACH, SEPA, SWIFT, RTP, UPI)
-  - Peer-to-peer payments (Venmo, Cash App, PayPal)
-  - Merchant acquiring & POS integration
-  - Cross-border & remittances
-  - Subscription & recurring billing
-  - Refunds, chargebacks, and disputes
-  - Payment gateways & APIs (Stripe, Adyen, Braintree, etc.)
-  - Tokenization & PCI compliance
+- Card processing (credit, debit, prepaid; Visa, Stripe)
+- Mobile & digital wallets (Apple Pay, Google Pay, Samsung Pay)
+- Bank transfers (ACH, SEPA, SWIFT, RTP, UPI)
+- Peer-to-peer payments (Venmo, Cash App, PayPal)
+- Cross-border transfers & remittances (Wise, PayPal)
+- Merchant acquiring & POS integration
+- Subscription & recurring billing
+- Refunds, chargebacks, and disputes
+- Payment gateways & APIs (Stripe, Adyen, Braintree)
+- Tokenization & PCI compliance
 
 ### Bank transfers:
 - Batch (ACH–US, SEPA Credit–EU)
@@ -37,7 +41,7 @@ Wallets: Apple Pay, Google Pay, PayPal, local wallets (Alipay, M-Pesa, etc.).
 ## Consumer-to-Business (C2B):
 The consumer provides payment information (e.g., credit card details) at the point of sale (POS) or online. The merchant's system sends this information to a payment gateway, which then routes it to a payment processor. The payment processor sends a request to the issuing bank (the consumer's bank) for authorization. Once authorized, the funds are transferred from the consumer's account to the merchant's acquiring bank, and finally to the merchant's account. This can take a few business days to settle
 
-if you already have `api.domain.com`, don’t nest another `/api` in the path. Prefer:
+if you already have `api.domain.com`, don't nest another `/api` in the path. Prefer:
 `https://api.domain.com/v1/...` ✅
 not `https://api.domain.com/api/v1/` 
 
@@ -47,7 +51,7 @@ Base: `https://api.domain.com/v1`
 `/v1/users, /v1/users/{userId}`
 `/v1/teams/{teamId}/members` (hierarchical when it adds clarity)
 
-```sh
+```http
 GET    /v1/users
 POST   /v1/users
 GET    /v1/users/{userId}
@@ -65,7 +69,7 @@ Provide an OpenAPI spec at `https://api.domain.com/openapi.json` and a human doc
 ### When to consider alternatives
 If clients need lots of joins/shape control → consider GraphQL at `https://api.domain.com/graphql`.
 If you need bi-directional push → Webhooks (`https://api.domain.com/v1/webhooks`) and/or WebSockets (`wss://api.domain.com/v1/events`)
-Tenanting (if multi-tenant): prefer headers or claims; avoid putting tenant IDs in every path unless it’s core to the resource model.
+Tenanting (if multi-tenant): prefer headers or claims; avoid putting tenant IDs in every path unless it's core to the resource model.
 
 ### Tenant from JWT claims (best for end-user calls)
 Clients authenticate with a Bearer token that already contains the tenant.
@@ -84,7 +88,7 @@ Authorization: Bearer eyJhbGciOi...
 }
 ```
 ### Tenant from a header (for service-to-service)
-Allow only trusted service principals (e.g., machine tokens, mTLS) to specify the tenant via a header such as `Tenant-Id` (or` X-Tenant-Id`). End-user tokens should not be allowed to override tenant by header.
+Allow only trusted service principals (e.g., machine tokens, mTLS) to specify the tenant via a header such as `Tenant-Id` (or `X-Tenant-Id`). End-user tokens should not be allowed to override tenant by header.
 ```http
 Request (service principal acting for a tenant)
 POST https://api.domain.com/v1/invoices
@@ -95,7 +99,8 @@ Content-Type: application/json
 { "amount": 12900, "currency": "USD" }
 
 ```
-for `wss://api.domain.com` and  `https://api.domain.com`
+### Cloudflare DNS for HTTPS and WebSocket
+For `wss://api.domain.com` and `https://api.domain.com`:
 Cloudflare sees only hostnames (DNS records), not protocols.
 You add `api.domain.com` in DNS and `proxy it (orange cloud)`
 
@@ -103,13 +108,13 @@ Cloudflare automatically handles both `https://api.domain.com/...` and `wss://ap
 
 `When you add a DNS record in Cloudflare, each record has a little cloud icon`:
 - Orange cloud ☁️ (proxied) : 
-  - Traffic to this hostname goes through Cloudflare’s proxy network.
+  - Traffic to this hostname goes through Cloudflare's proxy network.
   - Cloudflare terminates TLS (SSL), applies security features (WAF, DDoS protection, bot management), caching, and then forwards the request to your origin server.
   - Works for both https:// and wss:// traffic.
 - Gray cloud ☁️ (DNS only) :
   - Cloudflare only provides DNS resolution.
-  - Traffic goes directly to your origin server, bypassing Cloudflare’s proxy.
-  - You don’t get Cloudflare’s SSL, WAF, or DDoS protection on this hostname
+  - Traffic goes directly to your origin server, bypassing Cloudflare's proxy.
+  - You don't get Cloudflare's SSL, WAF, or DDoS protection on this hostname
 
 modern CDNs (Cloudflare, Fastly, Akamai, etc.) use Anycast to route traffic to their edge servers.
 In HTTP, status code 101 means "Switching Protocols".
@@ -125,10 +130,12 @@ HTTP/1.1 101 Switching Protocols
 Upgrade: websocket
 Connection: Upgrade
 ```
-`build an api-first bank from scratch that handles core banking,payments and compliance system`
+## Goal: API-first bank
+Build an api-first bank from scratch that handles core banking, payments, and compliance.
 
-nearly all of their functionality (accounts, payments, KYC, ledger, etc.) is exposed via APIs, allowing third parties (fintechs, platforms, apps) to integrate them deeply
+Nearly all of their functionality (accounts, payments, KYC, ledger, etc.) is exposed via APIs, allowing third parties (fintechs, platforms, apps) to integrate them deeply.
 
+### API hardening checklist
 - Use `https://api.domain.com`
 - Prefer Bearer tokens (OAuth 2.0 / OIDC) over cookies for API calls.
 - Lock cookies (if any) to Domain=api.domain.com and do not set them for .domain.com.
@@ -142,7 +149,9 @@ Public API: `https://api.domain.com` (separate stack, WAF, rate limits, independ
 Auth:
 Browser → API: Auth Code + PKCE (tokens stored in memory, not localStorage).
 Server→API or partner clients: Client Credentials.
-Tokens: Short-lived access tokens (5–15 min) + refresh via a backend or a well-audited token manager. Validate issuer, audience, alg, exp, kid.
+Tokens:
+- Short-lived access tokens (5–15 min); refresh via a backend or a well-audited token manager.
+- Validate issuer, audience, alg, exp, kid.
 
 ```conf
 # /etc/nginx/conf.d/api.conf
@@ -191,7 +200,7 @@ server {
 Set a strong CSP on domain.com (affects the app, not the API):
 Example: only allow scripts from self and your CDN/IdP.
 
-```c#
+```csharp
 // Program.cs (ASP.NET Core 8+)
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -257,7 +266,7 @@ app.Run();
 ```
 `Content Security Policy (CSP)` is an HTTP response header (or <meta> tag) that tells the browser which sources of content are allowed to load on your site — and blocks everything else.
 
-```sh
+```http
 Content-Security-Policy: script-src 'self' https://cdn.domain.com https://login.identityprovider.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';
 ```
 This means:
@@ -281,7 +290,7 @@ Calls your backend API at `https://api.domain.com`,
 And uses Auth0 / Azure AD for login,
 then you might use:
 
-```sh
+```http
 Content-Security-Policy:
   default-src 'none';
   script-src 'self' https://cdn.domain.com https://cdn.auth0.com;
@@ -299,8 +308,10 @@ In your reverse proxy / CDN / server:
 Or in your app:
 `<meta http-equiv="Content-Security-Policy" content="script-src 'self' ...">`
 
-Use the header form whenever possible — it’s more secure and can’t be overridden by the page.
-credit institution providing BaaS (bank accounts, cards, payments, lending, KYC) via APIs
+Use the header form whenever possible — it's more secure and can't be overridden by the page.
+
+## Banking-as-a-Service (BaaS)
+A credit institution providing BaaS (bank accounts, cards, payments, lending, KYC) via APIs.
 
 ### Payments platform
 - Orchestration service
@@ -327,8 +338,8 @@ Customers
 - POST /customers/{customerId}:close (customers.write)
 KYC/KYB
 - POST /customers/{customerId}/kyc-intents (kyc.write) – start verification
-- GET /kyc-intents/{intentId} (kyc.read) – status: pending|needs_info|verified|rejected
-- POST /kyc-intents/{intentId}/documents (kyc.write; multipart) – doc upload
+- GET /customers/{customerId}/kyc-intents/{intentId} (kyc.read) – status: pending|needs_info|verified|rejected
+- POST /customers/{customerId}/kyc-intents/{intentId}/documents (kyc.write; multipart) – doc upload
 - GET /customers/{customerId}/screenings (kyc.read) – PEP/sanctions hits & decisions
 
 2) **Accounts & products**
@@ -343,7 +354,7 @@ Accounts
 - POST /accounts/{accountId}:close (accounts.write)
 Balances & statements
 - GET /accounts/{accountId}/balance (accounts.read) – computed from ledger
-GET /accounts/{accountId}/statements?from=...&to=...&format=pdf|csv (accounts.read)
+- GET /accounts/{accountId}/statements?from=...&to=...&format=pdf|csv (accounts.read)
 Beneficiaries
 - POST /beneficiaries (beneficiaries.write)
 - GET /beneficiaries (beneficiaries.read)
@@ -357,7 +368,7 @@ Posting (internal or privileged partners)
 Reversals
 - POST /ledger/journals/{journalId}:reverse (ledger.post)
 
-```http
+```json
 {
   "type":"TRANSFER",
   "entries":[
@@ -389,10 +400,10 @@ Quotes & FX (optional)
 - POST /fx/quotes (fx.read) – price a currency conversion
 - POST /fx/conversions (fx.write) – book conversion
 - GET /fx/conversions/{id} (fx.read)
-Rails metadata
+**Rails metadata**
 - GET /rails (payments.read) – supported schemes & capabilities per country (e.g., ZA EFT, KE mobile money)
-Webhook events (outbound)
-payment.succeeded, payment.failed, transfer.posted, payout.settled, mandate.signed
+
+**Webhook events (outbound):** payment.succeeded, payment.failed, transfer.posted, payout.settled, mandate.signed
 
 5) **Webhooks (management)**
 - POST /webhooks/endpoints (webhooks.write) – register URL & secret
@@ -409,13 +420,14 @@ Screening (on demand/ongoing)
 - GET /compliance/screenings/{id} (compliance.read)
 Transaction Monitoring
 - GET /compliance/rules (compliance.read)
-POST /compliance/rules (compliance.write) – create/edit rule (velocity, geo, amount patterns)
+- POST /compliance/rules (compliance.write) – create/edit rule (velocity, geo, amount patterns)
 - GET /compliance/alerts?status=open (compliance.read)
 - POST /compliance/alerts/{alertId}/dispositions (compliance.write) – escalate/close, add notes, attach docs
 Cases & reporting
 - GET /compliance/cases/{caseId} (compliance.read)
 - POST /compliance/reports/sar (compliance.write) – prepare SAR/STR draft (jurisdiction aware)
 
+### Module dependencies
 Many modules depend on many others (payments → core, accounts, customers; ledgers → core, accounts, customers). That grows a dense graph and slows builds.
 
 [a-guide-to-api-first-banking-and-open-finance](https://koreminds.ai/a-guide-to-api-first-banking-and-open-finance/)
@@ -429,7 +441,6 @@ Here are major demands fintech systems place on their data layer:
 - Scalability (read & write, distributed geography) — fintech systems often span regions and large user bases. 
 - Flexibility in schema / handling semi-structured & unstructured data — e.g., customer behaviour, logs, risk-analytics. 
 - Regulatory compliance, auditability, security — ledger trails, data locality, encryption. 
-Vela - Postgres Database Platform
 - Real-time analytics, time-series/historical data — market data, trading ticks, risk exposures. 
 Because of that mix, fintech systems often adopt polyglot persistence — i.e., more than one database type depending on use-case.
 
@@ -447,7 +458,7 @@ Database will be your bottleneck
 In nginx, an upstream block defines a group of backend servers (e.g. your API, app, or auth service).
 Each server line inside tells nginx where to forward requests — by IP address + port or a UNIX socket path
 
-```sh
+```nginx
 upstream api_backend {
     server 10.0.1.5:8080;     # backend server 1 (IP:PORT)
     server 10.0.1.6:8080;     # backend server 2 (for load balancing)
@@ -457,7 +468,7 @@ upstream api_backend {
 ```
 Then elsewhere in your config:
 
-```sh
+```nginx
 location / {
     proxy_pass http://api_backend;
 }
@@ -475,7 +486,7 @@ GET https://api.domain.com/v1/users
 nginx looks at the Host header and sees `api.domain.com`
 - nginx finds the right server block
 It searches for a server block like:
-```sh
+```nginx
 server {
     listen 443 ssl http2;
     server_name api.domain.com;
@@ -483,9 +494,9 @@ server {
 }
 ```
 
-- Inside that block, there’s a location directive
-You’ll usually see something like:
-```sh
+- Inside that block, there's a location directive
+You'll usually see something like:
+```nginx
 location / {
     proxy_pass http://api_backend;
     proxy_set_header Host $host;
@@ -494,7 +505,7 @@ location / {
 ```
 - nginx looks up that upstream
 Earlier in the config, you defined:
-```sh
+```nginx
 upstream api_backend {
     server 10.0.0.5:8080;
     server 10.0.0.6:8080;
@@ -531,7 +542,7 @@ dockerBaseImage
 ```scala
 ThisBuild / version := scala.sys.process.Process("git rev-parse HEAD").!!.trim.slice(0, 7)
 
-//This dynamically sets your project version to the short Git commit hash of the current repository HEAD — that’s the 7-character version you often see like a1b2c3d.
+//This dynamically sets your project version to the short Git commit hash of the current repository HEAD — that's the 7-character version you often see like a1b2c3d.
 ```
 - `scala.sys.process.Process("git rev-parse HEAD").!!`
 Runs the shell command git rev-parse HEAD inside SBT.
@@ -541,9 +552,10 @@ Removes any newline characters from the output.
 - `.slice(0, 7)`
 Keeps only the first 7 characters (the short SHA).
 
-for  businesses and developers, open banking provides user-consented access to user data programmatically, using APIs. Developers can now build third-party apps that connect to bank accounts seamlessly and create new user experiences
+## Open banking
+For businesses and developers, open banking provides user-consented access to user data programmatically, using APIs. Developers can now build third-party apps that connect to bank accounts seamlessly and create new user experiences.
 
-alternative to plaid is Finicity / Mastercard Open Banking (formerly Finicity)
+An alternative to Plaid is Finicity / Mastercard Open Banking (formerly Finicity).
 
 `unified API` for accessing financial data across multiple banks and financial institutions, without needing to integrate with each one separately. This allows developers to build applications that can access a wide range of financial data and services with a single integration.
 
@@ -555,11 +567,13 @@ Plaid abstracts away those differences — giving fintechs a single, consistent 
 
 *A major concern of open banking is security* 
 
-Apple Pay	Wallet + Tokenization Service	Links to your card (via banks / card networks). Generates a payment token (Device Account Number) stored securely on your iPhone or Apple Watch. When you pay, Apple sends a token — not your card number.
-Google Pay	Wallet + Payment Service	Works similarly — stores your cards (credit/debit) or account credentials. Supports both NFC tap payments and online transactions using tokens.
+| Service | Type | How it works |
+|---------|------|--------------|
+| Apple Pay | Wallet + Tokenization Service | Links to your card (via banks / card networks). Generates a payment token (Device Account Number) stored securely on your iPhone or Apple Watch. When you pay, Apple sends a token — not your card number. |
+| Google Pay | Wallet + Payment Service | Stores your cards (credit/debit) or account credentials. Supports both NFC tap payments and online transactions using tokens. |
 
 To install the OVHcloud CLI, you can use the following command:
-```curl
+```sh
 curl -fsSL https://raw.githubusercontent.com/ovh/ovhcloud-cli/main/install.sh | sh
 ```
 You can also run the CLI using Docker:
@@ -640,7 +654,7 @@ docker run -it --rm -v ovhcloud-cli-config-files:/config ovhcom/ovhcloud-cli log
 RUN chown -R 42420:42420 /workspace
 
 ```
-if a given content asset is not in our cache for a customer’s site, we retrieve the asset from OVHcloud.
+if a given content asset is not in our cache for a customer's site, we retrieve the asset from OVHcloud.
 Peering is a direct connection between two network providers for the purpose of exchanging traffic. Transit is when one network pays an intermediary network to carry traffic to the destination network.
 
 Cloudflare generally exchanges most of our traffic with OVHcloud over peering links.
@@ -652,7 +666,7 @@ hetzner
 fly io
 ovh cloud
 
-```sh
+```text
                     Internet
                        |
                  Load Balancer
@@ -694,19 +708,19 @@ Open Finance will also have an effect on Direct Debit payments, allowing Direct 
 An exciting development for online shopping fans is the payment initiation services that Open Finance will provide. They will allow online shoppers to make direct payments from their bank accounts without entering their credit or debit card details each time. This also has huge potential for business-to-business payments
 
 ### Lending
-The lending industry is one of the most stagnant business sectors in the market. Third-party lenders must evaluate applicants’ risk profiles and financial behaviour to determine their creditworthiness. This is done in a slow, manual and biased manner or by employing algorithms that are often too simplistic in their analysis
+The lending industry is one of the most stagnant business sectors in the market. Third-party lenders must evaluate applicants' risk profiles and financial behaviour to determine their creditworthiness. This is done in a slow, manual and biased manner or by employing algorithms that are often too simplistic in their analysis
 
-Open Finance solves this issue because it allows lenders to access data from different areas of an applicant’s life. From taxes to spending habits, lenders can tap into data and information they previously were oblivious to
+Open Finance solves this issue because it allows lenders to access data from different areas of an applicant's life. From taxes to spending habits, lenders can tap into data and information they previously were oblivious to
 
 ### Enhance consumer financial decision-making
 Just as Open Finance helps lenders, it also helps consumers. Open Finance will further evolve personal finance management (PFM) apps and give people with average to low financial literacy the tools they need to make informed decisions. Logging on to their app will be enough to oversee and manage all the financial aspects of their lives
 
 ### Cross-industry collaborations
-One of open banking’s main advantages is the personalisation of banking products and services. By giving consent to share their data, consumers allow businesses to tailor their offerings based on their specific needs. Open Finance can improve on this. 
-Open Finance can allow businesses from different sectors to collaborate and create packaged offerings for their customers. Opening up access to a customer’s financial footprint can create unlimited opportunities, from understanding the interaction between tax, insurance, and loans to develop offers based on real trends and relationships.
+One of open banking's main advantages is the personalisation of banking products and services. By giving consent to share their data, consumers allow businesses to tailor their offerings based on their specific needs. Open Finance can improve on this. 
+Open Finance can allow businesses from different sectors to collaborate and create packaged offerings for their customers. Opening up access to a customer's financial footprint can create unlimited opportunities, from understanding the interaction between tax, insurance, and loans to develop offers based on real trends and relationships.
 
-AISPs act on behalf of the bank to access customer information. They are authorised to view bank account information, but cannot initiate payments or transfers. Credit bureaus, for example, may use AISPs to check a customer’s credit history and creditworthiness.
-PISPs, meanwhile, act on a consumer’s behalf to initiate payments. A PISP allows you to carry out online payments without the need for credit or debit card details.
+AISPs act on behalf of the bank to access customer information. They are authorised to view bank account information, but cannot initiate payments or transfers. Credit bureaus, for example, may use AISPs to check a customer's credit history and creditworthiness.
+PISPs, meanwhile, act on a consumer's behalf to initiate payments. A PISP allows you to carry out online payments without the need for credit or debit card details.
 
 ## How open banking works
 With open banking, regulated TPPs are permitted access to your bank account data and can initiate payments. This access to your account, however, is only granted with your consent, which can be withdrawn at any time and keeps you in control.
@@ -719,17 +733,17 @@ Open banking, by way of TPPs, offers users the following feature:
 - Apps for making bank payments via TPP
 - Tools for budgeting
 
-An authorised AISP can access a user’s bank account data via their financial institution, but this only happens when the user provides explicit consent. 
-This access is, however, defined as “read-only”, which means that they can only see the information but cannot access the account. Therefore, it is not possible for the AISP to, for example, move money from that account
+An authorised AISP can access a user's bank account data via their financial institution, but this only happens when the user provides explicit consent. 
+This access is, however, defined as "read-only", which means that they can only see the information but cannot access the account. Therefore, it is not possible for the AISP to, for example, move money from that account
 
 AISPs access financial data — provided that the user has consented to share that information — and use it to offer personalised and innovative financial products and services. 
 From savings insights to ethical investment, AISPs use advanced machine learning algorithms and data analytics to offer recommendations that are suited to the specific needs of a particular user.
 
-A Payment Initiation Service Provider (PISP) is able to access read-only data from a bank account, and they are also authorised to initiate payments on a customer’s behalf. PISPs can therefore be used to make payments directly from a bank account, removing the need for a debit or credit card.
+A Payment Initiation Service Provider (PISP) is able to access read-only data from a bank account, and they are also authorised to initiate payments on a customer's behalf. PISPs can therefore be used to make payments directly from a bank account, removing the need for a debit or credit card.
 
 Build a unified payment platform for businesses and individuals
 
-```sh
+```http
 GET /cards
 GET /cards/{card_id}
 POST /cards/issue
@@ -830,3 +844,4 @@ POST   /kiosks/{kioskId}/withdraw
 GET    /kiosks/{kioskId}/transactions
 
 ```
+

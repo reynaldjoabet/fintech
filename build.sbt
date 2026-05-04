@@ -1,10 +1,10 @@
-import org.checkerframework.checker.units.qual.t
-import Dependencies._
+import Dependencies.*
+import com.typesafe.sbt.packager.docker.*
 import com.typesafe.sbt.packager.docker.DockerChmodType
-import com.typesafe.sbt.packager.docker._
-import scala.sys.process._
-import scala.util.Try
+
 import java.nio.file.Path
+import scala.sys.process.*
+import scala.util.Try
 ThisBuild / scalaVersion := "3.3.7"
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
@@ -58,10 +58,18 @@ lazy val latestGitTag: String =
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-lazy val root = (project in file("."))
+lazy val root = project
+  .in(file("."))
   .settings(
     name := "fintech",
-    libraryDependencies += munit % Test
+    libraryDependencies ++= Seq(
+      munit % Test,
+      bouncycastle,
+      password4j,
+      nimbusdsJoseJwt,
+      nimbusdsOauth2OidcSdk,
+      catsEffect
+    )
   )
   .settings(
     libraryDependencies ++= Seq(
@@ -401,7 +409,8 @@ parTestGroup := (Def.inputTaskDyn {
   }
 }).evaluated
 
-lazy val `finicity-codegen` = (project in file("modules/finicity-codegen"))
+lazy val `finicity-codegen` = project
+  .in(file("modules/finicity-codegen"))
   .enablePlugins(OpenApiGeneratorPlugin)
   .settings(
     name := "finicity-codegen",
@@ -454,7 +463,8 @@ lazy val `finicity-codegen` = (project in file("modules/finicity-codegen"))
     )
   )
 
-lazy val `clickbank-codegen` = (project in file("modules/clickbank-codegen"))
+lazy val `clickbank-codegen` = project
+  .in(file("modules/clickbank-codegen"))
   .enablePlugins(OpenApiGeneratorPlugin)
   .settings(
     name := "clickbank-codegen",

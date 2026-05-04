@@ -8,7 +8,7 @@ import com.github.plokhotnyuk.jsoniter_scala.macros.{
 
 import finicity.models.*
 import finicity.api.IdentityApi
-import finicity.api.AnalyticsApi
+//import finicity.api.AnalyticsApi
 import finicity.api.AccountsApi
 import finicity.api.AppRegistrationApi
 import finicity.api.AuthenticationApi
