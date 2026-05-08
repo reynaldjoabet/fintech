@@ -23,14 +23,9 @@ import java.nio.CharBuffer
   * The RFC suggests to use 1 GiB of memory for frontend and 4 GiB for backend
   * authentication.</p>
   *
-  * <p>Example crypt string is:
-  * {@@code$argon2i$v=19$m=16384,t=100,p=2$M3ByeyZKLjFRREJqQi87WQ$5kRCtDjL6RoIWGq9bL27DkFNunucg1hW280PmP0XDtY}
-  * .</p>
-  *
   * <p>Default values are taken from <a
   * href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-argon2/?include_text=1">draft-irtf-cfrg-argon2-13</a>.
   * This implementation is using the parameters from section 4, paragraph 2
   * (memory constrained environment).</p>
   */
-
 object KeyDerivation {}

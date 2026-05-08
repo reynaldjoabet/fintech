@@ -4,7 +4,6 @@ import cats.effect.{Resource, Sync}
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
 import org.bouncycastle.util.encoders.Hex
-
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 
@@ -48,7 +47,7 @@ final class LiveHashing[F[_]: Sync] private extends Hashing[F] {
       hash.length
     )
 
-    // TODO: Best practice argon2id 해싱 값을 DB 에 저장 검색
+    // TODO: Best practice argon2id
     // Return the salt and hash, typically encoded in Hex or Base64
     Hex.toHexString(salt) + ":" + Hex.toHexString(hash)
   }
@@ -60,7 +59,6 @@ final class LiveHashing[F[_]: Sync] private extends Hashing[F] {
       val salt = Hex.decode(parts(0))
       val storedHash = Hex.decode(parts(1))
 
-      // TODO: 중복 제거
       // Build the Argon2 parameters using the stored salt
       val params: Argon2Parameters = Argon2Parameters
         .Builder(Argon2Parameters.ARGON2_id)

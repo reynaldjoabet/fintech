@@ -63,11 +63,11 @@ lazy val root = project
   .settings(
     name := "fintech",
     libraryDependencies ++= Seq(
-      munit % Test,
+      munit,
       bouncycastle,
       password4j,
-      nimbusdsJoseJwt,
-      nimbusdsOauth2OidcSdk,
+      nimbusJoseJwt,
+      nimbusOidc,
       catsEffect
     )
   )
@@ -202,7 +202,6 @@ lazy val testkit = project
   .settings(prodSettings, name := "testkit", publish / skip := true)
   .settings(
     libraryDependencies ++= Seq(
-      scalaTest % Test,
       logback % Test,
       slf4j % Test
     )
@@ -220,8 +219,7 @@ lazy val common = project
       catsEffect,
       pureconfig,
       slf4j,
-      logback % Runtime,
-      scalaTest % Test
+      logback % Runtime
     ),
     javacOptions ++= Seq(
       "-Xlint",
@@ -245,8 +243,7 @@ lazy val protocols = project
     libraryDependencies ++= Seq(
       sttpJsoniter,
       jsoniter,
-      jsoniterMacros,
-      scalaTest % Test
+      jsoniterMacros
     )
   )
 
@@ -260,8 +257,7 @@ lazy val core = project
       catsEffect,
       postgres,
       skunkCore,
-      flyway,
-      scalaTest % Test
+      flyway
     )
   )
 
@@ -287,8 +283,7 @@ lazy val ledger = project
       catsEffect,
       postgres,
       skunkCore,
-      flyway,
-      scalaTest % Test
+      flyway
     )
   )
 
@@ -300,8 +295,7 @@ lazy val payments = project
   .settings(
     libraryDependencies ++= Seq(
       sttpCore,
-      sttpCats,
-      scalaTest % Test
+      sttpCats
     )
   )
 
@@ -312,7 +306,6 @@ lazy val compliance = project
   .dependsOn(common, protocols, customers, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      scalaTest % Test
     )
   )
 
@@ -326,8 +319,7 @@ lazy val loans = project
       catsEffect,
       postgres,
       skunkCore,
-      flyway,
-      scalaTest % Test
+      flyway
     )
   )
 
@@ -338,7 +330,6 @@ lazy val webhooks = project
   .dependsOn(common, protocols, testkit % "test->test")
   .settings(
     libraryDependencies ++= Seq(
-      scalaTest % Test
     )
   )
 
@@ -364,15 +355,13 @@ lazy val api = project
     Compile / mainClass := Some("com.domain.api.Main"),
     libraryDependencies ++= Seq(
       catsEffect,
-      `http4s-dsl`,
+      http4sDsl,
       emberServer,
       emberClient,
       tapirCore,
       tapirHttp4sServer,
       tapirJsoniterScala,
-      tapirOpenAPIDocs,
-      tapirSwaggerUIBundle,
-      scalaTest % Test
+      tapirOpenAPIDocs
     )
   )
 
