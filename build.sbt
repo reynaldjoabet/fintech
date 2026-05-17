@@ -67,7 +67,7 @@ lazy val root = project
       bouncycastle,
       password4j,
       nimbusJoseJwt,
-      nimbusOidc,
+      nimbusOauth2Oidc,
       catsEffect
     )
   )
