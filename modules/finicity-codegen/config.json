@@ -2,7 +2,6 @@
   "generatorName": "scala-sttp4-jsoniter",
   "inputSpec": "modules/finicity-codegen/finicity.yaml",
   "outputDir": "modules/finicity-codegen/src/main/scala",
-  "templateDir": "modules/finicity-codegen/custom-templates",
   "mainPackage": "",
   "apiPackage": "finicity.api",
   "modelPackage": "finicity.models",
@@ -21,8 +20,8 @@
   "enumUnknownDefaultCase": "true",
   "disallowAdditionalPropertiesIfNotPresent": "false",
   "separateErrorChannel": "true",
-  "sttpClientVersion": "4.0.15",
-  "jsoniterVersion": "2.38.8",
+  "sttpClientVersion": "4.0.25",
+  "jsoniterVersion": "2.38.14",
   "additionalProperties": {
     "artifactVersion": "1.0.0",
     "sourceFolder": "",

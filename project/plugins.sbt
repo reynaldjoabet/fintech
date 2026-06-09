@@ -1,4 +1,4 @@
-addSbtPlugin("org.openapitools" % "sbt-openapi-generator" % "7.22.0")
+addSbtPlugin("org.openapitools" % "sbt-openapi-generator" % "7.23.0")
 
 // Packaging / Docker
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.11.7")
