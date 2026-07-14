@@ -16,7 +16,7 @@ object Dependencies {
     // --- HTTP ---
     val http4s = "0.23.36"
     val sttp4 = "4.0.26"
-    val tapir = "1.13.27"
+    val tapir = "1.13.28"
     val jsonRpc = "0.2.0"
 
     // --- JSON ---
