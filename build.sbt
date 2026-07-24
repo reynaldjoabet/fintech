@@ -5,7 +5,7 @@ import com.typesafe.sbt.packager.docker.DockerChmodType
 import java.nio.file.Path
 import scala.sys.process.*
 import scala.util.Try
-ThisBuild / scalaVersion := "3.3.7"
+ThisBuild / scalaVersion := "3.3.8"
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
@@ -49,7 +49,7 @@ lazy val buildId = Def.task {
   ) getOrElse "unknown"
 }
 
-def currentVersion = ("git describe --tags --match v*" !!).trim.substring(1)
+def currentVersion = "git describe --tags --match v*".!!.trim.substring(1)
 
 lazy val latestGitTag: String =
   Try("git describe --tags --abbrev=0".!!.trim)
@@ -98,23 +98,10 @@ lazy val root = project
   )
   .settings(publish / skip := true)
 
-val generate = taskKey[Unit]("generate code from APIs")
-val cleanGenerated = taskKey[Unit]("delete previously generated api/model code")
-
-// =================== COMMON SETTINGS & DEPENDENCIES ===================
-
-// ============ Global ============
-
-//ThisBuild / organization               := "com.domain"
 ThisBuild / resolvers ++= Seq(Resolver.mavenCentral)
 ThisBuild / versionScheme := Some("early-semver")
 
-// Align Java toolchain & container (set to 17 if you deploy on 17)
-//ThisBuild / javacOptions := Seq("-release", "21")
-
 ThisBuild / javacOptions := Seq("-source", "17", "-target", "17")
-//It locks your Java source + bytecode compatibility to JDK 17.
-//Ensures identical behaviour in CI, local dev, and Docker (17-based runtime).
 lazy val isCi = false //sys.enVersion.get("CI").contains("true")
 
 // ================= PRODUCTION DEFAULTS ==============
@@ -136,8 +123,6 @@ lazy val prodSettings = Seq(
     "Implementation-Title" -> name.value,
     "Implementation-Version" -> version.value
   ),
-
-  // speed CI; enable scaladoc in releases if needed
   Compile / doc / sources := Seq.empty
 )
 
@@ -148,7 +133,7 @@ ThisBuild / coverageHighlighting := true
 
 // =================== ASSEMBLY =======================
 lazy val assemblySettings = Seq(
-  assembly / test := {},
+  assembly / test := sbt.protocol.testing.TestResult.Passed,
   assembly / assemblyMergeStrategy := {
     case PathList("META-INF", xs @ _*) =>
       xs.map(_.toLowerCase) match {
@@ -163,12 +148,6 @@ lazy val assemblySettings = Seq(
     case _                   => MergeStrategy.first
   }
 )
-// entrypoint.sh is automatically copied into /opt/docker by sbt-native-packager.
-//ExecCmd("RUN", "chmod", "u+x", "/opt/docker/entrypoint.sh")
-// Docker / labels := Map(
-//   "org.opencontainers.image.source"  -> "https://github.com/your-org/your-repo",
-//   "org.opencontainers.image.version" -> version.value
-// )
 
 // ==================== DOCKER ========================
 lazy val dockerSettings = Seq(
@@ -182,9 +161,13 @@ lazy val dockerSettings = Seq(
   dockerBaseImage := "eclipse-temurin:21-jre",
   // dockerBaseImage := "amazoncorretto:17"
   // dockerBaseImage := "openj"
-  Universal / mappings += file(
-    "entrypoint.sh"
-  ) -> "entrypoint.sh", // When creating the Universal package, include the file entrypoint.sh from my project root, and place it in the root of the packaged archive
+  Universal / mappings += {
+    val ref: HashedVirtualFileRef =
+      fileConverter.value.toVirtualFile(
+        (baseDirectory.value / "entrypoint.sh").toPath
+      )
+    ref -> "entrypoint.sh"
+  }, // include entrypoint.sh at the root of the packaged archive
   dockerEntrypoint := Seq("/opt/docker/entrypoint.sh"),
   dockerExposedPorts := Seq(8080),
   // dockerRepository := Some("docker.io"),
@@ -207,9 +190,6 @@ lazy val testkit = project
     )
   )
 
-// ==================== MODULES =======================
-
-// common: plumbing (config/logging/concurrency utils)
 lazy val common = project
   .in(file("modules/common"))
   .settings(prodSettings, name := "common")
@@ -247,7 +227,6 @@ lazy val protocols = project
     )
   )
 
-// core: DB access shared services (if you centralize repositories)
 lazy val core = project
   .in(file("modules/core"))
   .settings(prodSettings, name := "core")
@@ -299,7 +278,6 @@ lazy val payments = project
     )
   )
 
-// compliance: screening/TM; reads customers (and optionally postings metadata)
 lazy val compliance = project
   .in(file("modules/compliance"))
   .settings(prodSettings, name := "compliance")
@@ -368,11 +346,10 @@ lazy val api = project
 // Define a custom task
 lazy val parTestGroup = inputKey[Unit]("Runs a single test group")
 parTestGroup := (Def.inputTaskDyn {
-  // Takes two parameters: groupId (which group to run) and numberOfGroups (total groups)
-  val List(groupId, numberOfGroups) = complete.DefaultParsers
-    .spaceDelimited("<arg>")
-    .parsed
-    .map(_.toInt)
+
+  val args = complete.DefaultParsers.spaceDelimited("<arg>").parsed.map(_.toInt)
+  val groupId = args(0)
+  val numberOfGroups = args(1)
 
   // Retrieves all available tests
   val allTests = (Test / definedTests).value
@@ -398,111 +375,35 @@ parTestGroup := (Def.inputTaskDyn {
   }
 }).evaluated
 
-lazy val `finicity-codegen` = project
-  .in(file("modules/finicity-codegen"))
-  .enablePlugins(OpenApiGeneratorPlugin)
-  .settings(
-    name := "finicity-codegen",
-    // openApiInputSpec := "src/main/resources/swagger.json",
-    // openApiGeneratorName := "sclala-sttp-client4",
-    openApiModelNamePrefix := "",
-    openApiModelNameSuffix := "",
-    openApiGenerateMetadata := Some(false),
-    openApiGenerateMetadata := SettingDisabled,
-    // Use the same JSON so CLI and SBT stay in sync
-    openApiConfigFile := ((Compile / baseDirectory).value / "config.json").getPath,
-    openApiIgnoreFileOverride := s"${baseDirectory.value.getPath}/openapi-ignore-file",
-
-    // Put generated sources where SBT expects managed sources
-    openApiOutputDir := ((Compile / baseDirectory).value / "src/main/scala").getAbsolutePath,
-    openApiGenerateModelTests := SettingDisabled,
-    openApiGenerateApiTests := SettingDisabled,
-    openApiValidateSpec := SettingDisabled,
-    // Fail fast on bad specs (optional but recommended)
-    // openApiValidateSpec := Some(true),
-    // Compile / sourceGenerators += openApiGenerate.taskValue,
-    (Compile / compile) := ((Compile / compile) dependsOn generate).value,
-    // (Compile/compile) := ((compile in Compile) dependsOn openApiGenerate).value
-
-    // Define the simple generate command to generate full client codes
-    cleanGenerated := {
-      val outputDir = file(openApiOutputDir.value)
-      val dirsToClean =
-        Seq(outputDir / "finicity" / "api", outputDir / "finicity" / "models")
-      dirsToClean.foreach(dir => IO.delete(dir))
-    },
-    generate := Def
-      .sequential(
-        cleanGenerated,
-        Def.task {
-          val _ = openApiGenerate.value
-          // Delete the generated build.sbt file so that it is not used for our sbt config
-          val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
-          if (buildSbtFile.exists()) {
-            buildSbtFile.delete()
-          }
-        }
+def codegenModule(pkg: String): Project =
+  Project(s"$pkg-codegen", file(s"modules/$pkg-codegen"))
+    .enablePlugins(OpenApiGeneratorPlugin)
+    .settings(
+      name := s"$pkg-codegen",
+      openApiModelNamePrefix := "",
+      openApiModelNameSuffix := "",
+      openApiGenerateMetadata := SettingDisabled,
+      openApiConfigFile := (baseDirectory.value / "config.json").getPath,
+      openApiIgnoreFileOverride :=
+        (baseDirectory.value.getParentFile / "openapi-ignore-file").getPath,
+      openApiOutputDir := (baseDirectory.value / "src/main/scala").getAbsolutePath,
+      openApiGenerateModelTests := SettingDisabled,
+      openApiGenerateApiTests := SettingDisabled,
+      openApiValidateSpec := SettingDisabled,
+      Compile / sourceGenerators += generate.taskValue,
+      Compile / unmanagedSourceDirectories := Seq.empty,
+      generate := Def.uncached {
+        openApiGenerate.value
+      },
+      libraryDependencies ++= Seq(
+        sttpJsoniter,
+        jsoniter,
+        jsoniterMacros,
+        jsoniterCirce
       )
-      .value,
-    libraryDependencies ++= Seq(
-      sttpJsoniter,
-      jsoniter,
-      jsoniterMacros,
-      jsoniterCirce
     )
-  )
 
-lazy val `clickbank-codegen` = project
-  .in(file("modules/clickbank-codegen"))
-  .enablePlugins(OpenApiGeneratorPlugin)
-  .settings(
-    name := "clickbank-codegen",
-    // openApiInputSpec := "src/main/resources/swagger.json",
-    // openApiGeneratorName := "sclala-sttp-client4",
-    openApiModelNamePrefix := "",
-    openApiModelNameSuffix := "",
-    openApiGenerateMetadata := Some(false),
-    openApiRemoveOperationIdPrefix := Some(true),
-    openApiGenerateMetadata := SettingDisabled,
-    // Use the same JSON so CLI and SBT stay in sync
-    openApiConfigFile := ((Compile / baseDirectory).value / "config.json").getPath,
-    openApiIgnoreFileOverride := s"${baseDirectory.value.getPath}/openapi-ignore-file",
+lazy val `finicity-codegen` = codegenModule("finicity")
 
-    // Put generated sources where SBT expects managed sources
-    openApiOutputDir := ((Compile / baseDirectory).value / "src/main/scala").getAbsolutePath,
-    openApiGenerateModelTests := SettingDisabled,
-    openApiGenerateApiTests := SettingDisabled,
-    openApiValidateSpec := SettingDisabled,
-    // Fail fast on bad specs (optional but recommended)
-    // openApiValidateSpec := Some(true),
-    // Compile / sourceGenerators += openApiGenerate.taskValue,
-    (Compile / compile) := ((Compile / compile) dependsOn generate).value,
-    // (Compile/compile) := ((compile in Compile) dependsOn openApiGenerate).value
-
-    // Define the simple generate command to generate full client codes
-    cleanGenerated := {
-      val outputDir = file(openApiOutputDir.value)
-      val dirsToClean =
-        Seq(outputDir / "clickbank" / "api", outputDir / "clickbank" / "models")
-      dirsToClean.foreach(dir => IO.delete(dir))
-    },
-    generate := Def
-      .sequential(
-        cleanGenerated,
-        Def.task {
-          val _ = openApiGenerate.value
-          // Delete the generated build.sbt file so that it is not used for our sbt config
-          val buildSbtFile = file(openApiOutputDir.value) / "build.sbt"
-          if (buildSbtFile.exists()) {
-            buildSbtFile.delete()
-          }
-        }
-      )
-      .value,
-    libraryDependencies ++= Seq(
-      sttpJsoniter,
-      jsoniter,
-      jsoniterMacros,
-      jsoniterCirce
-    )
-  )
+lazy val `clickbank-codegen` = codegenModule("clickbank")
+  .settings(openApiRemoveOperationIdPrefix := Some(true))
