@@ -90,7 +90,8 @@ lazy val root = project
     loans,
     webhooks,
     api,
-    testkit
+    testkit,
+    examples
   )
   .dependsOn(
     `finicity-codegen` % "compile->compile"
@@ -187,6 +188,22 @@ lazy val testkit = project
     libraryDependencies ++= Seq(
       logback % Test,
       slf4j % Test
+    )
+  )
+
+// ==================== EXAMPLES ======================
+// Runnable usage examples for the generated finicity client. Kept out of the
+// codegen module on purpose: that module sets unmanagedSourceDirectories to
+// empty (the generator owns its tree), so hand-written sources have to live
+// here. Not published; run with `examples/runMain finicity.examples.<Name>`.
+lazy val examples = project
+  .in(file("modules/examples"))
+  .settings(prodSettings, name := "examples", publish / skip := true)
+  .dependsOn(`finicity-codegen`)
+  .settings(
+    run / fork := true,
+    libraryDependencies ++= Seq(
+      sttpCore // DefaultSyncBackend to actually send the generated requests
     )
   )
 

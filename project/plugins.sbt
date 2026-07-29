@@ -9,8 +9,6 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.2")
 
 // Coverage
 addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.4.4")
-// CI release (optional)
-// Note: 1.11.0+ uses Central Portal instead of Legacy OSSRH — update CI secrets accordingly
 addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.12.0")
 
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.7.0")
