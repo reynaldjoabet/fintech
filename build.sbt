@@ -9,6 +9,7 @@ ThisBuild / scalaVersion := "3.3.8"
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
+ThisBuild / semanticdbEnabled := true
 // define task to get version from git tags
 
 lazy val gitTagVersion = taskKey[String]("Get version from git tags")
@@ -56,7 +57,32 @@ lazy val latestGitTag: String =
     .map(_.stripPrefix("v"))
     .getOrElse("latest")
 
+ThisBuild / scalacOptions := Seq(
+  "-encoding",
+  "UTF-8",
+  "-no-indent",
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-source:3.3",
+  "-java-output-version:17",
+  "-Werror",
+  // "-Wunused:all",
+  "-Wvalue-discard",
+  "-Wnonunit-statement",
+  "-Xlint:all",
+  "-Xcheck-macros",
+  "-Xmax-inlines:64"
+)
+
 Global / onChangedBuildSource := ReloadOnSourceChanges
+
+val generatedScalacOptions = Seq(
+  "-encoding",
+  "UTF-8",
+  "-java-output-version:17",
+  "-Xmax-inlines:64"
+)
 
 lazy val root = project
   .in(file("."))
@@ -107,12 +133,6 @@ lazy val isCi = false //sys.enVersion.get("CI").contains("true")
 
 // ================= PRODUCTION DEFAULTS ==============
 lazy val prodSettings = Seq(
-  Compile / scalacOptions ++= Seq(
-    "-deprecation",
-    "-unchecked",
-    "-feature",
-    "-Yretain-trees"
-  ) ++ (if (isCi) Seq("-Xfatal-warnings") else Nil),
   Test / fork := true,
   Test / parallelExecution := false,
   Test / logBuffered := false,
@@ -396,6 +416,7 @@ def codegenModule(pkg: String): Project =
   Project(s"$pkg-codegen", file(s"modules/$pkg-codegen"))
     .enablePlugins(OpenApiGeneratorPlugin)
     .settings(
+      scalacOptions := generatedScalacOptions,
       name := s"$pkg-codegen",
       openApiModelNamePrefix := "",
       openApiModelNameSuffix := "",
