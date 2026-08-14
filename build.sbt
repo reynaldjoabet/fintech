@@ -1,10 +1,12 @@
+import java.nio.file.Path
+
+import scala.sys.process.*
+import scala.util.Try
+
 import Dependencies.*
 import com.typesafe.sbt.packager.docker.*
 import com.typesafe.sbt.packager.docker.DockerChmodType
 
-import java.nio.file.Path
-import scala.sys.process.*
-import scala.util.Try
 ThisBuild / scalaVersion := "3.3.8"
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
@@ -31,10 +33,10 @@ lazy val version3 =
 lazy val description = Try("git describe --tags --match v*".!!.trim).toOption
 
 lazy val buildId = Def.task {
-  val log = streams.value.log
+  val log                                     = streams.value.log
   def runCommand(cmd: String): Option[String] = {
     import scala.sys.process._
-    val sb = new StringBuilder
+    val sb   = new StringBuilder
     val code = cmd ! ProcessLogger(sb append _)
     val text = sb.toString()
     if (code == 0) {
@@ -45,9 +47,13 @@ lazy val buildId = Def.task {
       None
     }
   }
-  runCommand("git describe --tags") orElse runCommand(
-    "git log -n1 --pretty=%h"
-  ) getOrElse "unknown"
+  runCommand("git describe --tags")
+    .orElse(
+      runCommand(
+        "git log -n1 --pretty=%h"
+      )
+    )
+    .getOrElse("unknown")
 }
 
 def currentVersion = "git describe --tags --match v*".!!.trim.substring(1)
@@ -87,7 +93,7 @@ val generatedScalacOptions = Seq(
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "fintech",
+    name                 := "fintech",
     libraryDependencies ++= Seq(
       munit,
       bouncycastle,
@@ -125,7 +131,7 @@ lazy val root = project
   )
   .settings(publish / skip := true)
 
-ThisBuild / resolvers ++= Seq(Resolver.mavenCentral)
+ThisBuild / resolvers    ++= Seq(Resolver.mavenCentral)
 ThisBuild / versionScheme := Some("early-semver")
 
 ThisBuild / javacOptions := Seq("-source", "17", "-target", "17")
@@ -133,15 +139,15 @@ lazy val isCi = false //sys.enVersion.get("CI").contains("true")
 
 // ================= PRODUCTION DEFAULTS ==============
 lazy val prodSettings = Seq(
-  Test / fork := true,
+  Test / fork              := true,
   Test / parallelExecution := false,
-  Test / logBuffered := false,
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
-  scalafmtOnCompile := true,
+  Test / logBuffered       := false,
+  Test / testOptions       += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
+  scalafmtOnCompile        := true,
 
   // reproducible metadata
   Compile / packageOptions += Package.ManifestAttributes(
-    "Implementation-Title" -> name.value,
+    "Implementation-Title"   -> name.value,
     "Implementation-Version" -> version.value
   ),
   Compile / doc / sources := Seq.empty
@@ -149,21 +155,21 @@ lazy val prodSettings = Seq(
 
 // =================== COVERAGE =======================
 ThisBuild / coverageMinimumStmtTotal := 80
-ThisBuild / coverageFailOnMinimum := isCi
-ThisBuild / coverageHighlighting := true
+ThisBuild / coverageFailOnMinimum    := isCi
+ThisBuild / coverageHighlighting     := true
 
 // =================== ASSEMBLY =======================
 lazy val assemblySettings = Seq(
-  assembly / test := sbt.protocol.testing.TestResult.Passed,
+  assembly / test                  := sbt.protocol.testing.TestResult.Passed,
   assembly / assemblyMergeStrategy := {
     case PathList("META-INF", xs @ _*) =>
       xs.map(_.toLowerCase) match {
-        case ("manifest.mf" :: Nil)     => MergeStrategy.discard
-        case ("index.list" :: Nil)      => MergeStrategy.discard
-        case ("dependencies" :: Nil)    => MergeStrategy.discard
-        case ("spring.schemas" :: Nil)  => MergeStrategy.concat
-        case ("spring.handlers" :: Nil) => MergeStrategy.concat
-        case _                          => MergeStrategy.first
+        case "manifest.mf" :: Nil     => MergeStrategy.discard
+        case "index.list" :: Nil      => MergeStrategy.discard
+        case "dependencies" :: Nil    => MergeStrategy.discard
+        case "spring.schemas" :: Nil  => MergeStrategy.concat
+        case "spring.handlers" :: Nil => MergeStrategy.concat
+        case _                        => MergeStrategy.first
       }
     case "module-info.class" => MergeStrategy.discard
     case _                   => MergeStrategy.first
@@ -172,14 +178,14 @@ lazy val assemblySettings = Seq(
 
 // ==================== DOCKER ========================
 lazy val dockerSettings = Seq(
-  Docker / packageName := s"domain/${name.value}",
-  Docker / version := version.value,
+  Docker / packageName   := s"domain/${name.value}",
+  Docker / version       := version.value,
   Docker / daemonUserUid := None,
-  Docker / daemonUser := "root",
-  dockerExposedVolumes := Seq("/data"),
-  dockerUpdateLatest := true,
-  dockerChmodType := DockerChmodType.UserGroupWriteExecute,
-  dockerBaseImage := "eclipse-temurin:21-jre",
+  Docker / daemonUser    := "root",
+  dockerExposedVolumes   := Seq("/data"),
+  dockerUpdateLatest     := true,
+  dockerChmodType        := DockerChmodType.UserGroupWriteExecute,
+  dockerBaseImage        := "eclipse-temurin:21-jre",
   // dockerBaseImage := "amazoncorretto:17"
   // dockerBaseImage := "openj"
   Universal / mappings += {
@@ -189,7 +195,7 @@ lazy val dockerSettings = Seq(
       )
     ref -> "entrypoint.sh"
   }, // include entrypoint.sh at the root of the packaged archive
-  dockerEntrypoint := Seq("/opt/docker/entrypoint.sh"),
+  dockerEntrypoint   := Seq("/opt/docker/entrypoint.sh"),
   dockerExposedPorts := Seq(8080),
   // dockerRepository := Some("docker.io"),
   Universal / javaOptions ++= Seq(
@@ -207,7 +213,7 @@ lazy val testkit = project
   .settings(
     libraryDependencies ++= Seq(
       logback % Test,
-      slf4j % Test
+      slf4j   % Test
     )
   )
 
@@ -221,7 +227,7 @@ lazy val examples = project
   .settings(prodSettings, name := "examples", publish / skip := true)
   .dependsOn(`finicity-codegen`)
   .settings(
-    run / fork := true,
+    run / fork           := true,
     libraryDependencies ++= Seq(
       sttpCore // DefaultSyncBackend to actually send the generated requests
     )
@@ -367,7 +373,7 @@ lazy val api = project
     testkit % "test->test"
   )
   .settings(
-    Compile / mainClass := Some("com.domain.api.Main"),
+    Compile / mainClass  := Some("com.domain.api.Main"),
     libraryDependencies ++= Seq(
       catsEffect,
       http4sDsl,
@@ -382,17 +388,17 @@ lazy val api = project
 
 // Define a custom task
 lazy val parTestGroup = inputKey[Unit]("Runs a single test group")
-parTestGroup := (Def.inputTaskDyn {
+parTestGroup := Def.inputTaskDyn {
 
-  val args = complete.DefaultParsers.spaceDelimited("<arg>").parsed.map(_.toInt)
-  val groupId = args(0)
+  val args           = complete.DefaultParsers.spaceDelimited("<arg>").parsed.map(_.toInt)
+  val groupId        = args(0)
   val numberOfGroups = args(1)
 
   // Retrieves all available tests
   val allTests = (Test / definedTests).value
 
   // Calculates how many tests should be in each group
-  val numberOfTests = allTests.size
+  val numberOfTests         = allTests.size
   val numberOfTestsPerGroup =
     if (numberOfTests % numberOfGroups == 0) {
       numberOfTests / numberOfGroups
@@ -401,7 +407,7 @@ parTestGroup := (Def.inputTaskDyn {
   // Divides tests into groups
   val groups = allTests.grouped(numberOfTestsPerGroup).toArray
 
-  val groupToRun = groups(groupId - 1)
+  val groupToRun     = groups(groupId - 1)
   val argForTestOnly = " " + groupToRun.map(_.name).mkString(" ")
 
   streams.value.log.info(s"Running testOnly:$argForTestOnly")
@@ -410,27 +416,27 @@ parTestGroup := (Def.inputTaskDyn {
   Def.taskDyn {
     (Test / testOnly).toTask(argForTestOnly)
   }
-}).evaluated
+}.evaluated
 
 def codegenModule(pkg: String): Project =
   Project(s"$pkg-codegen", file(s"modules/$pkg-codegen"))
     .enablePlugins(OpenApiGeneratorPlugin)
     .settings(
-      scalacOptions := generatedScalacOptions,
-      name := s"$pkg-codegen",
-      openApiModelNamePrefix := "",
-      openApiModelNameSuffix := "",
-      openApiGenerateMetadata := SettingDisabled,
-      openApiConfigFile := (baseDirectory.value / "config.json").getPath,
+      scalacOptions             := generatedScalacOptions,
+      name                      := s"$pkg-codegen",
+      openApiModelNamePrefix    := "",
+      openApiModelNameSuffix    := "",
+      openApiGenerateMetadata   := SettingDisabled,
+      openApiConfigFile         := (baseDirectory.value / "config.json").getPath,
       openApiIgnoreFileOverride :=
         (baseDirectory.value.getParentFile / "openapi-ignore-file").getPath,
-      openApiOutputDir := (baseDirectory.value / "src/main/scala").getAbsolutePath,
-      openApiGenerateModelTests := SettingDisabled,
-      openApiGenerateApiTests := SettingDisabled,
-      openApiValidateSpec := SettingDisabled,
-      Compile / sourceGenerators += generate.taskValue,
+      openApiOutputDir                     := (baseDirectory.value / "src/main/scala").getAbsolutePath,
+      openApiGenerateModelTests            := SettingDisabled,
+      openApiGenerateApiTests              := SettingDisabled,
+      openApiValidateSpec                  := SettingDisabled,
+      Compile / sourceGenerators           += generate.taskValue,
       Compile / unmanagedSourceDirectories := Seq.empty,
-      generate := Def.uncached {
+      generate                             := Def.uncached {
         openApiGenerate.value
       },
       libraryDependencies ++= Seq(

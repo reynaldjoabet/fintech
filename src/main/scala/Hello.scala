@@ -1,6 +1,8 @@
 package example
+
 import finicity.models.*
 object Hello extends App with Greeting {
+
   println(greeting)
 
   val checkingAccount = CustomerAccount(
@@ -218,6 +220,7 @@ object Hello extends App with Greeting {
     sixMonthAverage = Some(800.0),
     beginningBalance = 500.0
   )
+
 }
 
 trait Greeting {

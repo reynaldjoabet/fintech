@@ -2,14 +2,14 @@ package finicity.examples
 
 import finicity.api.AuthenticationApi
 import finicity.models.{AccessToken, PartnerCredentials}
-
 import sttp.client4.{DefaultSyncBackend, Response, ResponseException}
 
-/** Runnable example: exchange partner credentials for a Finicity access token.
+/**
+  * Runnable example: exchange partner credentials for a Finicity access token.
   *
-  * The generated client returns each call as an sttp `Request` value -- nothing
-  * is sent until you run it against a backend. Here we use `DefaultSyncBackend`
-  * (JDK HttpClient, from sttp-core), so this needs no extra backend dependency.
+  * The generated client returns each call as an sttp `Request` value -- nothing is sent until you
+  * run it against a backend. Here we use `DefaultSyncBackend` (JDK HttpClient, from sttp-core), so
+  * this needs no extra backend dependency.
   *
   * Credentials come from the environment so nothing secret is committed:
   *
@@ -20,16 +20,16 @@ import sttp.client4.{DefaultSyncBackend, Response, ResponseException}
   *   sbt "examples/runMain finicity.examples.AuthenticationExample"
   * }}}
   *
-  * With no env vars set it prints usage and exits without a network call, so it
-  * stays safe to run in any environment.
+  * With no env vars set it prints usage and exits without a network call, so it stays safe to run
+  * in any environment.
   */
 object AuthenticationExample {
 
   def main(args: Array[String]): Unit = {
     val creds =
       for {
-        appKey <- sys.env.get("FINICITY_APP_KEY")
-        partnerId <- sys.env.get("FINICITY_PARTNER_ID")
+        appKey        <- sys.env.get("FINICITY_APP_KEY")
+        partnerId     <- sys.env.get("FINICITY_PARTNER_ID")
         partnerSecret <- sys.env.get("FINICITY_PARTNER_SECRET")
       } yield (appKey, PartnerCredentials(partnerId, partnerSecret))
 
@@ -50,8 +50,7 @@ object AuthenticationExample {
 
         val backend = DefaultSyncBackend()
         try {
-          val response
-              : Response[Either[ResponseException[String], AccessToken]] =
+          val response: Response[Either[ResponseException[String], AccessToken]] =
             api.createToken(partnerCredentials).send(backend)
 
           response.body match {
@@ -69,4 +68,5 @@ object AuthenticationExample {
         } finally backend.close()
     }
   }
+
 }

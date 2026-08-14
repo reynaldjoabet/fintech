@@ -3,6 +3,7 @@ package example
 import finicity.models.*
 
 object FinicityExamples {
+
   // Core examples for common/generated Finicity models
   val exampleAccount: CustomerAccount = CustomerAccount(
     id = "acct-1",

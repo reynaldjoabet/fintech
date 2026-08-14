@@ -1,27 +1,31 @@
-import cats.implicits.*
+import java.nio.charset.StandardCharsets
+import java.security.SecureRandom
+
 import cats.effect.{Resource, Sync}
+import cats.implicits.*
 
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator
 import org.bouncycastle.crypto.params.Argon2Parameters
 import org.bouncycastle.util.encoders.Hex
-import java.nio.charset.StandardCharsets
-import java.security.SecureRandom
 
 trait Hashing[F[_]] {
+
   def hash(value: String): F[String]
   def verify(value: String, hashed: String): F[Boolean]
+
 }
 
 final class LiveHashing[F[_]: Sync] private extends Hashing[F] {
-  private val MEMORY = 15 * 1024 // 15 MiB
-  private val ITERATIONS = 2 // 2 iterations
-  private val PARALLELISM = 1 // 1 thread
-  private val HASH_LENGTH = 64 // 64 bytes for a strong hash
+
+  private val MEMORY      = 15 * 1024 // 15 MiB
+  private val ITERATIONS  = 2         // 2 iterations
+  private val PARALLELISM = 1         // 1 thread
+  private val HASH_LENGTH = 64        // 64 bytes for a strong hash
 
   override def hash(value: String): F[String] = Sync[F].delay {
     // Generate a random salt for each password
     val random: SecureRandom = SecureRandom()
-    val salt = new Array[Byte](16) // 16 bytes is a good salt size
+    val salt                 = new Array[Byte](16) // 16 bytes is a good salt size
     random.nextBytes(salt)
 
     // Build the Argon2 parameters
@@ -55,8 +59,8 @@ final class LiveHashing[F[_]: Sync] private extends Hashing[F] {
   override def verify(value: String, hashed: String): F[Boolean] =
     Sync[F].delay {
       // Split the stored string into its components: salt and hash
-      val parts = hashed.split(":")
-      val salt = Hex.decode(parts(0))
+      val parts      = hashed.split(":")
+      val salt       = Hex.decode(parts(0))
       val storedHash = Hex.decode(parts(1))
 
       // Build the Argon2 parameters using the stored salt
@@ -85,9 +89,12 @@ final class LiveHashing[F[_]: Sync] private extends Hashing[F] {
       // Compare the newly generated hash with the stored hash
       newHash.sameElements(storedHash)
     }
+
 }
 
 object LiveHashing {
+
   def apply[F[_]: Sync]: Resource[F, LiveHashing[F]] =
     Resource.eval(new LiveHashing[F].pure[F])
+
 }

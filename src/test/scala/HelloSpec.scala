@@ -2,6 +2,7 @@ import example.Hello
 import munit.FunSuite
 
 class HelloSpec extends munit.FunSuite {
+
   test("say hello") {
     assertEquals(Hello.greeting, "hello")
   }
