@@ -74,7 +74,7 @@ object Hello extends App with Greeting {
           bestRepresentation = Some("Grocery Store - New York, NY")
         )
       ),
-      checkNum = Some("0"),
+      checkNum = Some(0),
       incomeType = Some(""),
       subaccountSecurityType = Some(""),
       commissionAmount = Some(0),
@@ -120,7 +120,7 @@ object Hello extends App with Greeting {
           bestRepresentation = Some("Gas Station - New York, NY")
         )
       ),
-      checkNum = Some("0"),
+      checkNum = Some(0),
       incomeType = Some(""),
       subaccountSecurityType = Some(""),
       commissionAmount = Some(0),

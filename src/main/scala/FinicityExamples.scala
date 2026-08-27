@@ -57,7 +57,7 @@ object FinicityExamples {
     postedDate = Some(1622548800L),
     transactionDate = Some(1622548800L),
     categorization = Some(exampleCategorization),
-    checkNum = Some("0"),
+    checkNum = Some(0),
     incomeType = Some(""),
     subaccountSecurityType = Some(""),
     commissionAmount = Some(0),
