@@ -845,3 +845,171 @@ GET    /kiosks/{kioskId}/transactions
 
 ```
 
+### TLS
+![alt text](image.png)
+
+RSA: Rivest, Shamir and Adleman
+- RSA, the Key Exchange (deprecated, as inscure)
+- RSA, the Certifcate Key( Being replaced by Elliptic Curve)
+- RSA, the Signature Algorithm(maybe okay, depends on the hashing)
+
+```sh
+┌─ Root CA cert ────────────────────────────┐
+│  subject key: root's RSA key              │   self-signed:
+│  signed by:   itself  ←────────────────┐  │   proves nothing,
+└────────────────────────────────────────┼──┘   trusted because
+                 │ root's private key ───┘      it's in your
+                 │ signs ↓                      trust store
+┌─ Intermediate CA cert ────────────────────┐
+│  subject key: intermediate's RSA key      │
+│  signed by:   root's key                  │
+└───────────────────────────────────────────┘
+                 │ intermediate's private key
+                 │ signs ↓
+┌─ Leaf / server cert ──────────────────────┐
+│  subject key: your server's RSA key       │
+│  signed by:   intermediate's key          │
+└───────────────────────────────────────────┘
+                 │ server's private key
+                 │ signs ↓
+          the TLS handshake (CertificateVerify)
+```
+In TLS 1.3 the server's RSA key does exactly one thing — signs the handshake transcript in `CertificateVerify`, proving it holds the private key matching the presented certificate. Key agreement is entirely ECDHE. So RSA survived the transition to TLS 1.3 not as an encryption algorithm but purely as a signature algorithm.
+
+Which surfaces a real operational gotcha: the Key Usage extension. Old certs issued for RSA key exchange carry `keyEncipherment`. TLS 1.3 needs `digitalSignature`. A certificate with only `keyEncipherment` is unusable in 1.3, and the resulting handshake failure is rarely legible.
+
+Sign with the private op over a hash; verify with the public op. The security lives almost entirely in the padding, and there are two schemes
+- RSASSA-PKCS#1 v1.5 
+- RSASSA-PSS 
+
+TLS 1.3 draws a sharp line here: `CertificateVerify` must use PSS (`rsa_pss_rsae_sha256` and friends)
+
+In JOSE:
+- RS256 = `RSASSA-PKCS#1 v1.5` + SHA-256 — the mandatory-to-implement ID token signing algorithm in OIDC Core, hence the default nearly everywhere.
+- `PS256` = `RSASSA-PSS + SHA-256` — what FAPI 2.0 requires, alongside ES256. FAPI explicitly forbids RS256.
+
+The only coupling that exists is within a single certificate: its `signatureAlgorithm` field must match the issuer's key type. An RSA CA can only produce RSA signatures; an ECDSA CA only ECDSA.
+
+```sh
+   ISRG Root X1
+   owns an RSA-4096 key pair
+        │
+        │  signs the intermediate's certificate
+        │  ─── with its RSA key, so the signature is RSA ───
+        ▼
+   Intermediate E5
+   owns an ECDSA P-384 key pair
+        │
+        │  signs the leaf's certificate
+        │  ─── with its ECDSA key, so the signature is ECDSA ───
+        ▼
+   Leaf (your server)
+   owns an ECDSA P-256 key pair
+```
+The signature's algorithm is decided by whoever signs. Each party's own key type is entirely their own business.
+
+The Root has an RSA key, so everything the Root signs carries an RSA signature — including E5's certificate, even though E5's own key is ECDSA. Then E5 signs the leaf with its ECDSA key, so that signature is ECDSA.
+
+ in one certificate:
+- `Signature Algorithm: sha256WithRSAEncryption` — the issuer's algorithm (the RSA root signed this)
+- `Public Key Algorithm: id-ecPublicKey` — the subject's algorithm (the leaf's own key is ECDSA)
+
+```sh
+Certificate ::= SEQUENCE {
+    tbsCertificate ::= SEQUENCE {
+        version, serialNumber,
+     ①  signature            AlgorithmIdentifier,  ← "sha256WithRSAEncryption"
+        issuer, validity, subject,                    offset 37 — INSIDE the
+     ②  subjectPublicKeyInfo ::= SEQUENCE {           signed region
+            algorithm        AlgorithmIdentifier,  ← "id-ecPublicKey"
+            subjectPublicKey BIT STRING              offset 139 — the leaf's
+        },                                           own key
+        extensions
+    },                          ─── everything above is what gets signed ───
+     ③ signatureAlgorithm       AlgorithmIdentifier,  ← "sha256WithRSAEncryption"
+        signatureValue          BIT STRING              offset 296 — OUTSIDE
+}                                                       the signed region
+```
+The signed part is `tbsCertificate` only, not the whole `Certificate`.
+`① and ③ both describe the issuer. ② describes the subject`.
+
+Why duplicate ① and ③? A parser needs to know which algorithm to use before it can verify anything — that's ③, sitting outside the signature so it's readable immediately. But a field outside the signature is unprotected: an attacker can edit it freely. So the same value is also placed inside the signed region as ①, where tampering breaks the signature.
+
+RFC 5280 requires them to be identical, and a verifier must reject the certificate if they differ. That check blocks algorithm substitution attacks — an attacker rewriting ③ to name a weaker algorithm, or one whose parameters they can manipulate, hoping the verifier follows the unprotected hint.
+
+```sh
+BASE64URL(protected header) . BASE64URL(payload) . BASE64URL(signature)
+└──────────────── signing input ────────────────┘   └── not covered ──┘
+```
+The signature covers the header and payload; it obviously can't cover itself. And the reason alg lives in the protected header rather than an unprotected one is identical to the reason for ① — an algorithm identifier outside the signed region is attacker-controlled, which is the root of the whole `alg: none` and `RS256→HS256` confusion family of attacks.
+
+So an entity statement in OpenID Federation, a JWT from `PrivateKeyJWT.java`, and an X.509 certificate all share one shape: a signed payload wrapped in an unsigned envelope that carries the signature, with the algorithm identifier duplicated inside the signed region so it can't be swapped.
+
+TLS transmits the chain leaf first, each certificate followed by the one that signed it. RFC 8446 §4.4.2 requires the sender's own certificate to come first,
+
+
+### Root CA (self-signed)
+```sh
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+  -keyout root.key -out root.crt \
+  -subj "/C=US/O=Demo/CN=Demo Root CA" \
+  -addext "basicConstraints=critical,CA:TRUE" \
+  -addext "keyUsage=critical,keyCertSign,cRLSign" \
+  -addext "subjectKeyIdentifier=hash"
+```  
+`-x509` makes it self-signed in one step. `-nodes` leaves the key unencrypted 
+
+
+### Intermediate: key + CSR
+```sh
+openssl req -newkey rsa:2048 -nodes \
+  -keyout inter.key -out inter.csr \
+  -subj "/C=US/O=Demo/CN=Demo Intermediate CA"
+```  
+No `-x509` here — this produces a certificate signing request, not a certificate.
+
+### Root signs the intermediate
+```sh
+cat > inter.ext <<'EOF'
+basicConstraints=critical,CA:TRUE,pathlen:0
+keyUsage=critical,keyCertSign,cRLSign
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always
+EOF
+
+openssl x509 -req -in inter.csr \
+  -CA root.crt -CAkey root.key -CAcreateserial \
+  -out inter.crt -days 1825 -sha256 -extfile inter.ext
+```  
+`CA:TRUE` is what makes it able to sign certificates. `pathlen:0` means it can issue leaves but no further CAs below it.
+
+### Leaf: key + CSR
+```sh
+openssl req -newkey rsa:2048 -nodes \
+  -keyout leaf.key -out leaf.csr \
+  -subj "/C=US/O=Demo/CN=demo.example"
+```  
+
+### Intermediate signs the leaf — the step you asked about
+```sh
+cat > leaf.ext <<'EOF'
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+subjectAltName=DNS:demo.example,DNS:www.demo.example
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always
+EOF
+
+openssl x509 -req -in leaf.csr \
+  -CA inter.crt -CAkey inter.key -CAcreateserial \
+  -out leaf.crt -days 397 -sha256 -extfile leaf.ext
+```  
+Identical form to step 3 — only `-CA/-CAkey` change, pointing at the intermediate instead of the root. That's the whole difference.
+
+### Verify and bundle
+```sh
+openssl verify -CAfile root.crt -untrusted inter.crt leaf.crt
+cat leaf.crt inter.crt > fullchain.pem     # leaf first, root omitted
+```
+![alt text](image-1.png)
