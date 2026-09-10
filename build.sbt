@@ -12,6 +12,8 @@ ThisBuild / scalaVersion := "3.3.8"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / semanticdbEnabled := true
+ThisBuild / semanticdbVersion := "4.17.3"
+
 // define task to get version from git tags
 
 lazy val gitTagVersion = taskKey[String]("Get version from git tags")
