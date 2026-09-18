@@ -7,7 +7,8 @@ import Dependencies.*
 import com.typesafe.sbt.packager.docker.*
 import com.typesafe.sbt.packager.docker.DockerChmodType
 
-ThisBuild / scalaVersion := "3.3.8"
+ThisBuild / scalaVersion       := "3.3.8"
+ThisBuild / crossScalaVersions := Seq("3.3.8", "3.9.0")
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
@@ -65,6 +66,13 @@ lazy val latestGitTag: String =
     .map(_.stripPrefix("v"))
     .getOrElse("latest")
 
+lazy val lintOption = Def.setting {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((3, minor)) if minor >= 5 => "-Wshadow:all"
+    case _                              => "-Xlint:all"
+  }
+}
+
 ThisBuild / scalacOptions := Seq(
   "-encoding",
   "UTF-8",
@@ -72,13 +80,12 @@ ThisBuild / scalacOptions := Seq(
   "-deprecation",
   "-feature",
   "-unchecked",
-  "-source:3.3",
   "-java-output-version:17",
   "-Werror",
   // "-Wunused:all",
   "-Wvalue-discard",
   "-Wnonunit-statement",
-  "-Xlint:all",
+  lintOption.value,
   "-Xcheck-macros",
   "-Xmax-inlines:64"
 )

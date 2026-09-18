@@ -1013,3 +1013,22 @@ openssl verify -CAfile root.crt -untrusted inter.crt leaf.crt
 cat leaf.crt inter.crt > fullchain.pem     # leaf first, root omitted
 ```
 ![alt text](image-1.png)
+
+
+private-shadow (E227) — a constructor param or private field quietly hides an inherited one:
+```scala
+class Account(val balance: Int)
+class Savings(balance: Int) extends Account(balance):
+  def report: Int = balance   // reads the param, NOT the inherited field
+```
+```sh
+value balance in class Savings shadows field balance inherited from class Account
+```
+type-parameter-shadow (E226) — a type param hides a type of the same name already in scope:
+```scala
+class Box[A](value: A):
+  def replace[A](other: A): Box[A] = Box(other)   // this A ≠ the class's A
+```
+```sh  
+Type parameter A for method replace shadows the type defined by type A in class Box
+```
