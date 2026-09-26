@@ -7,10 +7,26 @@ import Dependencies.*
 import com.typesafe.sbt.packager.docker.*
 import com.typesafe.sbt.packager.docker.DockerChmodType
 
-ThisBuild / scalaVersion       := "3.3.8"
+ThisBuild / scalaVersion := "3.9.0"
+ThisBuild / version      := "0.1.0-SNAPSHOT"
+
 ThisBuild / crossScalaVersions := Seq("3.3.8", "3.9.0")
 
-ThisBuild / version := "0.1.0-SNAPSHOT"
+ThisBuild / scalacOptions := Seq(
+  "-encoding",
+  "UTF-8",
+  "-no-indent",
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  // "-Werror",
+  // "-Wunused:all",
+  "-Wvalue-discard",
+  "-Wnonunit-statement",
+  "-language:strictEquality",
+  "-Xcheck-macros",
+  "-Xmax-inlines:64"
+)
 
 ThisBuild / semanticdbEnabled := true
 ThisBuild / semanticdbVersion := "4.17.3"
@@ -72,23 +88,6 @@ lazy val lintOption = Def.setting {
     case _                              => "-Xlint:all"
   }
 }
-
-ThisBuild / scalacOptions := Seq(
-  "-encoding",
-  "UTF-8",
-  "-no-indent",
-  "-deprecation",
-  "-feature",
-  "-unchecked",
-  "-java-output-version:17",
-  "-Werror",
-  // "-Wunused:all",
-  "-Wvalue-discard",
-  "-Wnonunit-statement",
-  lintOption.value,
-  "-Xcheck-macros",
-  "-Xmax-inlines:64"
-)
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
