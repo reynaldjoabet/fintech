@@ -102,21 +102,11 @@ lazy val root = project
   .in(file("."))
   .settings(
     name                 := "fintech",
-    libraryDependencies ++= Seq(
-      munit,
-      bouncycastle,
-      password4j,
-      nimbusJoseJwt,
-      nimbusOauth2Oidc,
-      catsEffect
-    )
+    libraryDependencies ++=
+      Dependencies.testing.munit ++ Dependencies.security.core ++ Dependencies.catsEffect
   )
   .settings(
-    libraryDependencies ++= Seq(
-      sttpCore,
-      jsoniter,
-      jsoniterMacros
-    )
+    libraryDependencies ++= Dependencies.sttp.core ++ Dependencies.json.jsoniter
   )
   .aggregate(
     common,
@@ -219,10 +209,7 @@ lazy val testkit = project
   .in(file("modules/testkit"))
   .settings(prodSettings, name := "testkit", publish / skip := true)
   .settings(
-    libraryDependencies ++= Seq(
-      logback % Test,
-      slf4j   % Test
-    )
+    libraryDependencies ++= Dependencies.logging.test
   )
 
 // ==================== EXAMPLES ======================
@@ -235,10 +222,9 @@ lazy val examples = project
   .settings(prodSettings, name := "examples", publish / skip := true)
   .dependsOn(`finicity-codegen`)
   .settings(
-    run / fork           := true,
-    libraryDependencies ++= Seq(
-      sttpCore // DefaultSyncBackend to actually send the generated requests
-    )
+    run / fork := true,
+    // DefaultSyncBackend to actually send the generated requests
+    libraryDependencies ++= Dependencies.sttp.core
   )
 
 lazy val common = project
@@ -246,12 +232,8 @@ lazy val common = project
   .settings(prodSettings, name := "common")
   .dependsOn(testkit % "test->test")
   .settings(
-    libraryDependencies ++= Seq(
-      catsEffect,
-      pureconfig,
-      slf4j,
-      logback % Runtime
-    ),
+    libraryDependencies ++=
+      Dependencies.catsEffect ++ Dependencies.config.pureconfig ++ Dependencies.logging.runtime,
     javacOptions ++= Seq(
       "-Xlint",
       "-J-Xss256M",
@@ -271,11 +253,7 @@ lazy val protocols = project
   .settings(prodSettings, name := "protocols")
   .dependsOn(common, testkit % "test->test")
   .settings(
-    libraryDependencies ++= Seq(
-      sttpJsoniter,
-      jsoniter,
-      jsoniterMacros
-    )
+    libraryDependencies ++= Dependencies.sttp.jsoniter ++ Dependencies.json.jsoniter
   )
 
 lazy val core = project
@@ -283,12 +261,7 @@ lazy val core = project
   .settings(prodSettings, name := "core")
   .dependsOn(common, protocols, testkit % "test->test")
   .settings(
-    libraryDependencies ++= Seq(
-      catsEffect,
-      postgres,
-      skunkCore,
-      flyway
-    )
+    libraryDependencies ++= Dependencies.catsEffect ++ Dependencies.database.postgres
   )
 
 // customers: identity & KYC state
@@ -309,12 +282,7 @@ lazy val ledger = project
   .settings(prodSettings, name := "ledger")
   .dependsOn(common, protocols, testkit % "test->test")
   .settings(
-    libraryDependencies ++= Seq(
-      catsEffect,
-      postgres,
-      skunkCore,
-      flyway
-    )
+    libraryDependencies ++= Dependencies.catsEffect ++ Dependencies.database.postgres
   )
 
 // payments: orchestration; talks to rails; posts to ledger
@@ -323,20 +291,13 @@ lazy val payments = project
   .settings(prodSettings, name := "payments")
   .dependsOn(common, protocols, ledger, accounts, testkit % "test->test")
   .settings(
-    libraryDependencies ++= Seq(
-      sttpCore,
-      sttpCats
-    )
+    libraryDependencies ++= Dependencies.sttp.core ++ Dependencies.sttp.cats
   )
 
 lazy val compliance = project
   .in(file("modules/compliance"))
   .settings(prodSettings, name := "compliance")
   .dependsOn(common, protocols, customers, testkit % "test->test")
-  .settings(
-    libraryDependencies ++= Seq(
-    )
-  )
 
 // loans / credit domain
 lazy val loans = project
@@ -344,12 +305,7 @@ lazy val loans = project
   .settings(prodSettings, name := "loans")
   .dependsOn(common, protocols, core, accounts, ledger, testkit % "test->test")
   .settings(
-    libraryDependencies ++= Seq(
-      catsEffect,
-      postgres,
-      skunkCore,
-      flyway
-    )
+    libraryDependencies ++= Dependencies.catsEffect ++ Dependencies.database.postgres
   )
 
 // webhooks: endpoint mgmt & delivery signing
@@ -357,10 +313,6 @@ lazy val webhooks = project
   .in(file("modules/webhooks"))
   .settings(prodSettings, name := "webhooks")
   .dependsOn(common, protocols, testkit % "test->test")
-  .settings(
-    libraryDependencies ++= Seq(
-    )
-  )
 
 // api: http4s + Tapir (jsoniter); wires everything; builds Docker & fat-jar
 lazy val api = project
@@ -382,16 +334,8 @@ lazy val api = project
   )
   .settings(
     Compile / mainClass  := Some("com.domain.api.Main"),
-    libraryDependencies ++= Seq(
-      catsEffect,
-      http4sDsl,
-      emberServer,
-      emberClient,
-      tapirCore,
-      tapirHttp4sServer,
-      tapirJsoniterScala,
-      tapirOpenAPIDocs
-    )
+    libraryDependencies ++=
+      Dependencies.catsEffect ++ Dependencies.http4s.core ++ Dependencies.tapir.core
   )
 
 // Define a custom task
@@ -447,15 +391,17 @@ def codegenModule(pkg: String): Project =
       generate                             := Def.uncached {
         openApiGenerate.value
       },
-      libraryDependencies ++= Seq(
-        sttpJsoniter,
-        jsoniter,
-        jsoniterMacros,
-        jsoniterCirce
-      )
+      libraryDependencies ++=
+        Dependencies.sttp.jsoniter ++ Dependencies.json.jsoniter ++ Dependencies.json.jsoniterCirce
     )
 
 lazy val `finicity-codegen` = codegenModule("finicity")
+  .settings(
+    scalaVersion := "3.3.8"
+  )
 
 lazy val `clickbank-codegen` = codegenModule("clickbank")
-  .settings(openApiRemoveOperationIdPrefix := Some(true))
+  .settings(
+    openApiRemoveOperationIdPrefix := Some(true),
+    scalaVersion                   := "3.3.8"
+  )
