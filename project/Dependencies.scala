@@ -14,13 +14,13 @@ object Dependencies {
     val zioKafka   = "4.0.0"
 
     // --- HTTP ---
-    val http4s  = "0.23.37"
+    val http4s  = "0.23.38"
     val sttp4   = "4.0.27"
-    val tapir   = "1.13.32"
+    val tapir   = "1.13.33"
     val jsonRpc = "0.2.0"
 
     // --- JSON ---
-    val jsoniter = "2.41.2"
+    val jsoniter = "2.42.0"
     val circe    = "0.14.16"
 
     // --- FP ---
@@ -65,7 +65,7 @@ object Dependencies {
     val otel4s  = "1.0.1"
 
     // --- Config ---
-    val pureconfig = "0.17.10"
+    val pureconfig = "0.17.11"
 
     // --- Cloud ---
     val awsV2         = "2.47.5"
