@@ -42,3 +42,6 @@ web/.DS_Store
 .mcp.json
 
 .claude/
+
+# SemanticDB for the build definition, written on reload when semanticdbEnabled is set globally
+*.sbt.semanticdb
