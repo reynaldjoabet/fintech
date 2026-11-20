@@ -14,13 +14,13 @@ object Dependencies {
     val zioKafka   = "4.0.0"
 
     // --- HTTP ---
-    val http4s  = "0.23.38"
-    val sttp4   = "4.0.27"
-    val tapir   = "1.13.33"
+    val http4s  = "0.23.39"
+    val sttp4   = "4.1.3"
+    val tapir   = "1.14.1"
     val jsonRpc = "0.2.0"
 
     // --- JSON ---
-    val jsoniter = "2.42.0"
+    val jsoniter = "2.43.0"
     val circe    = "0.14.16"
 
     // --- FP ---
@@ -39,12 +39,12 @@ object Dependencies {
     val magnum   = "2.0.0-M3"
     val skunk    = "2.0.0-RC3"
     val hikaricp = "7.1.0"
-    val flyway   = "13.12.2"
+    val flyway   = "13.13.0"
     val postgres = "42.7.14"
 
     // --- Security ---
     val jwtScala         = "11.0.4"
-    val bouncycastle     = "1.86"
+    val bouncycastle     = "1.87"
     val password4j       = "1.8.4"
     val auth0            = "4.6.2"
     val nimbusJoseJwt    = "10.10"
@@ -54,7 +54,7 @@ object Dependencies {
     // --- Logging ---
     val scribe  = "3.19.0"
     val slf4j   = "2.0.20"
-    val logback = "1.6.6"
+    val logback = "1.6.8"
 
     // --- Cache ---
     val caffeine = "3.3.1"

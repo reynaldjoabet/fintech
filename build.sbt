@@ -394,12 +394,8 @@ def codegenModule(pkg: String): Project =
     )
 
 lazy val `finicity-codegen` = codegenModule("finicity")
-  .settings(
-    scalaVersion := "3.3.8"
-  )
 
 lazy val `clickbank-codegen` = codegenModule("clickbank")
   .settings(
-    openApiRemoveOperationIdPrefix := Some(true),
-    scalaVersion                   := "3.3.8"
+    openApiRemoveOperationIdPrefix := Some(true)
   )
